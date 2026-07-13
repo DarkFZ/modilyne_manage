@@ -1,0 +1,26 @@
+{
+  "name": "Atelier de Costura",
+  "short_name": "Atelier",
+  "description": "Cadastro de clientes e histórico de medidas para atelier de costura, 100% local no dispositivo.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#efe7fb",
+  "theme_color": "#7c5cbf",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

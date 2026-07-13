@@ -1,0 +1,459 @@
+:root {
+  --cor-primaria: #7c5cbf;
+  --cor-primaria-escura: #5f43a0;
+  --cor-fundo: #faf8fd;
+  --cor-superficie: #ffffff;
+  --cor-borda: #e3ddef;
+  --cor-texto: #2a2530;
+  --cor-texto-secundario: #6f6579;
+  --cor-perigo: #c0392b;
+  --cor-perigo-fundo: #fbeae8;
+  --cor-sucesso: #2e7d4f;
+  --sombra: 0 2px 10px rgba(60, 40, 90, 0.08);
+  --raio: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cor-primaria: #a488e0;
+    --cor-primaria-escura: #c3aef0;
+    --cor-fundo: #17151b;
+    --cor-superficie: #221f28;
+    --cor-borda: #37323f;
+    --cor-texto: #ede9f2;
+    --cor-texto-secundario: #ada4b8;
+    --cor-perigo: #e88a7d;
+    --cor-perigo-fundo: #3a2320;
+    --cor-sucesso: #7fd8a4;
+    --sombra: 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+#app {
+  max-width: 900px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.escondido {
+  display: none !important;
+}
+
+/* Topbar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--cor-superficie);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.topbar-titulo {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--cor-primaria-escura);
+}
+
+.topbar-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.campo-busca {
+  padding: 8px 12px;
+  border-radius: var(--raio);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  min-width: 160px;
+}
+
+/* Buttons */
+.botao {
+  padding: 9px 14px;
+  border-radius: var(--raio);
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.botao:hover {
+  filter: brightness(0.95);
+}
+
+.botao-primario {
+  background: var(--cor-primaria);
+  color: #fff;
+}
+
+.botao-secundario {
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  border-color: var(--cor-borda);
+}
+
+.botao-perigo {
+  background: var(--cor-perigo-fundo);
+  color: var(--cor-perigo);
+  border-color: var(--cor-perigo);
+}
+
+.botao-icone {
+  background: transparent;
+  border: 1px solid var(--cor-borda);
+  width: 38px;
+  height: 38px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.botao-voltar {
+  background: none;
+  border: none;
+  color: var(--cor-primaria);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 4px 0;
+  margin-bottom: 8px;
+}
+
+/* Menu dropdown */
+.menu-container {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--cor-texto);
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background: var(--cor-fundo);
+}
+
+.dropdown-item-perigo {
+  color: var(--cor-perigo);
+}
+
+/* Main content */
+main {
+  flex: 1;
+  padding: 16px;
+}
+
+.view h2 {
+  color: var(--cor-primaria-escura);
+}
+
+/* Client grid / cards */
+.grid-clientes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.cartao-cliente {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 14px;
+  cursor: pointer;
+  box-shadow: var(--sombra);
+}
+
+.cartao-cliente h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.cartao-cliente p {
+  margin: 2px 0;
+  font-size: 0.85rem;
+  color: var(--cor-texto-secundario);
+}
+
+.estado-vazio {
+  color: var(--cor-texto-secundario);
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.texto-secundario {
+  color: var(--cor-texto-secundario);
+}
+
+/* Forms */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--cor-texto-secundario);
+}
+
+.campo input,
+.campo textarea,
+.campo select {
+  padding: 9px 10px;
+  border-radius: var(--raio);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.campo-curto {
+  max-width: 140px;
+}
+
+.fieldset {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 12px;
+}
+
+.fieldset legend {
+  padding: 0 6px;
+  color: var(--cor-primaria-escura);
+  font-weight: 600;
+}
+
+.grade-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.acoes-formulario {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Detail view */
+.detalhe-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detalhe-acoes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.abas {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--cor-borda);
+  margin-bottom: 16px;
+}
+
+.aba {
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: var(--cor-texto-secundario);
+  font-size: 0.92rem;
+}
+
+.aba-ativa {
+  color: var(--cor-primaria);
+  border-bottom-color: var(--cor-primaria);
+  font-weight: 600;
+}
+
+.lista-definicao {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+}
+
+.lista-definicao dt {
+  color: var(--cor-texto-secundario);
+  font-size: 0.85rem;
+}
+
+.lista-definicao dd {
+  margin: 0;
+}
+
+/* Measurements list */
+.lista-medicoes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cartao-medicao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 12px 14px;
+}
+
+.cartao-medicao summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.cartao-medicao .medicao-meta {
+  color: var(--cor-texto-secundario);
+  font-size: 0.8rem;
+}
+
+.tabela-medidas {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.tabela-medidas th {
+  text-align: left;
+  color: var(--cor-texto-secundario);
+  padding: 4px 8px 4px 0;
+  font-weight: 500;
+}
+
+.tabela-medidas td {
+  padding: 4px 8px 4px 0;
+}
+
+.excluir-medicao {
+  margin-top: 8px;
+}
+
+/* Comparison */
+.comparar-selecao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.diferenca-positiva {
+  color: var(--cor-perigo);
+}
+
+.diferenca-negativa {
+  color: var(--cor-sucesso);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--cor-texto);
+  color: var(--cor-fundo);
+  padding: 10px 18px;
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  z-index: 100;
+  font-size: 0.9rem;
+}
+
+.toast-erro {
+  background: var(--cor-perigo);
+  color: #fff;
+}
+
+.toast-sucesso {
+  background: var(--cor-sucesso);
+  color: #fff;
+}
+
+/* Confirmation dialog */
+.dialogo-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.dialogo {
+  background: var(--cor-superficie);
+  border-radius: var(--raio);
+  padding: 20px;
+  max-width: 380px;
+  box-shadow: var(--sombra);
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .topbar-acoes {
+    justify-content: space-between;
+  }
+  .campo-busca {
+    flex: 1;
+  }
+}
