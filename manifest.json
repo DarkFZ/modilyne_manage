@@ -1,7 +1,7 @@
 {
-  "name": "Atelier de Costura",
-  "short_name": "Atelier",
-  "description": "Cadastro de clientes e histórico de medidas para atelier de costura, 100% local no dispositivo.",
+  "name": "Modilyne",
+  "short_name": "Modilyne",
+  "description": "Modilyne — cadastro de clientes e histórico de medidas para atelier de costura, 100% local no dispositivo.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -11,16 +11,10 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "icons/icon.svg",
+      "src": "assets/Modilyne_logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
-    },
-    {
-      "src": "icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     }
   ]
 }

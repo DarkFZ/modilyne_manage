@@ -10,6 +10,7 @@ import {
   salvarCliente,
   excluirCliente,
   adicionarNovaMedicao,
+  editarMedicao,
   excluirMedicao,
   obterUltimaMedicao,
   compararMedicoes,
@@ -281,8 +282,16 @@ function renderMedicoes(cliente) {
         <thead><tr><th>Medida</th><th>Valor (${medicao.unidade})</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table>
-      <button class="botao botao-perigo excluir-medicao">Excluir esta medição</button>
+      <div class="medicao-acoes">
+        <button class="botao botao-secundario editar-medicao">Editar esta medição</button>
+        <button class="botao botao-perigo excluir-medicao">Excluir esta medição</button>
+      </div>
     `;
+
+    detalhes.querySelector('.editar-medicao').addEventListener('click', (evento) => {
+      evento.preventDefault();
+      abrirFormularioMedicao(medicao);
+    });
 
     detalhes.querySelector('.excluir-medicao').addEventListener('click', async (evento) => {
       evento.preventDefault();
@@ -310,11 +319,22 @@ function construirCamposMedicao() {
   }
 }
 
-el('btn-nova-medicao').addEventListener('click', () => {
+function abrirFormularioMedicao(medicao = null) {
   el('form-medicao').reset();
-  el('medicao-unidade').value = 'cm';
+  el('medicao-id').value = medicao?.idMedicao || '';
+  el('form-medicao-titulo').textContent = medicao ? 'Editar medição' : 'Nova medição';
+  el('medicao-evento').value = medicao?.evento || '';
+  el('medicao-unidade').value = medicao?.unidade || 'cm';
+
+  document.querySelectorAll('#form-medicao input[data-grupo]').forEach((input) => {
+    const valor = medicao ? medicao.medidas[input.dataset.grupo][input.dataset.campo] : null;
+    input.value = valor === null || valor === undefined ? '' : valor;
+  });
+
   mostrarView('form-medicao');
-});
+}
+
+el('btn-nova-medicao').addEventListener('click', () => abrirFormularioMedicao());
 
 el('form-medicao').addEventListener('submit', (evento) => {
   evento.preventDefault();
@@ -325,8 +345,12 @@ el('form-medicao').addEventListener('submit', (evento) => {
     dadosMedidas[input.dataset.grupo][input.dataset.campo] = valor === '' ? null : Number(valor);
   });
 
-  const resultado = adicionarNovaMedicao(estado.clienteAtualId, dadosMedidas, el('medicao-evento').value);
-  if (relatarResultado(resultado, 'Medição registrada.')) {
+  const idMedicao = el('medicao-id').value;
+  const resultado = idMedicao
+    ? editarMedicao(estado.clienteAtualId, idMedicao, dadosMedidas, el('medicao-evento').value)
+    : adicionarNovaMedicao(estado.clienteAtualId, dadosMedidas, el('medicao-evento').value);
+
+  if (relatarResultado(resultado, idMedicao ? 'Medição atualizada.' : 'Medição registrada.')) {
     abrirDetalheCliente(estado.clienteAtualId, 'medidas');
   }
 });
@@ -465,6 +489,34 @@ el('btn-apagar-tudo').addEventListener('click', async () => {
     mostrarView('lista');
   }
 });
+
+// ---------- Tema claro/escuro ----------
+
+const CHAVE_TEMA = 'atelier_tema_preferencia';
+
+function obterTemaEfetivo() {
+  const salvo = localStorage.getItem(CHAVE_TEMA);
+  if (salvo === 'claro' || salvo === 'escuro') return salvo;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+}
+
+function aplicarTema(tema) {
+  document.documentElement.setAttribute('data-theme', tema === 'escuro' ? 'dark' : 'light');
+  el('btn-tema').textContent = tema === 'escuro' ? '☀️' : '🌙';
+  el('btn-tema').setAttribute('aria-label', tema === 'escuro' ? 'Mudar para modo claro' : 'Mudar para modo escuro');
+}
+
+el('btn-tema').addEventListener('click', () => {
+  const novoTema = obterTemaEfetivo() === 'escuro' ? 'claro' : 'escuro';
+  localStorage.setItem(CHAVE_TEMA, novoTema);
+  aplicarTema(novoTema);
+});
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!localStorage.getItem(CHAVE_TEMA)) aplicarTema(obterTemaEfetivo());
+});
+
+aplicarTema(obterTemaEfetivo());
 
 // ---------- Inicialização ----------
 

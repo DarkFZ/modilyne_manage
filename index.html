@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Atelier de Costura</title>
-  <meta name="description" content="Cadastro de clientes e histórico de medidas para atelier de costura — 100% local, sem servidor." />
+  <title>Modilyne</title>
+  <meta name="description" content="Modilyne — cadastro de clientes e histórico de medidas para atelier de costura, 100% local, sem servidor." />
   <meta name="theme-color" content="#7c5cbf" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <link rel="icon" href="assets/Modilyne_logo.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/Modilyne_logo.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div id="app">
     <header class="topbar">
-      <h1 class="topbar-titulo">Atelier de Costura</h1>
+      <h1 class="topbar-titulo">Modilyne</h1>
       <div class="topbar-acoes">
         <input id="campo-busca" class="campo-busca" type="search" placeholder="Buscar cliente..." aria-label="Buscar cliente" />
         <button id="btn-nova-cliente" class="botao botao-primario">+ Nova cliente</button>
+        <button id="btn-tema" class="botao botao-icone" aria-label="Alternar tema claro/escuro" title="Alternar tema">🌙</button>
         <div class="menu-container">
           <button id="btn-menu" class="botao botao-icone" aria-haspopup="true" aria-expanded="false" aria-label="Mais opções">⋮</button>
           <div id="menu-dropdown" class="dropdown escondido" role="menu">
@@ -140,8 +141,9 @@
       <!-- Formulário de nova medição -->
       <section id="view-form-medicao" class="view escondido">
         <button class="botao-voltar" data-voltar-para="detalhe">&larr; Voltar</button>
-        <h2>Nova medição</h2>
+        <h2 id="form-medicao-titulo">Nova medição</h2>
         <form id="form-medicao" class="formulario">
+          <input type="hidden" id="medicao-id" />
           <label class="campo">
             <span>Evento / vestido</span>
             <input type="text" id="medicao-evento" placeholder="Ex: Vestido de festa" />

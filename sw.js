@@ -1,4 +1,4 @@
-const CACHE_NAME = 'atelier-costura-v1';
+const CACHE_NAME = 'modilyne-v4';
 
 const ARQUIVOS_ESSENCIAIS = [
   './',
@@ -13,7 +13,7 @@ const ARQUIVOS_ESSENCIAIS = [
   './js/validators.js',
   './js/clientesRepository.js',
   './js/backupService.js',
-  './icons/icon.svg'
+  './assets/Modilyne_logo.svg'
 ];
 
 self.addEventListener('install', (evento) => {

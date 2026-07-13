@@ -29,6 +29,36 @@
   }
 }
 
+/* Preferência explícita do usuário (botão de tema), sempre vence o
+   media query acima, seja qual for o tema do sistema operacional. */
+:root[data-theme="light"] {
+  --cor-primaria: #7c5cbf;
+  --cor-primaria-escura: #5f43a0;
+  --cor-fundo: #faf8fd;
+  --cor-superficie: #ffffff;
+  --cor-borda: #e3ddef;
+  --cor-texto: #2a2530;
+  --cor-texto-secundario: #6f6579;
+  --cor-perigo: #c0392b;
+  --cor-perigo-fundo: #fbeae8;
+  --cor-sucesso: #2e7d4f;
+  --sombra: 0 2px 10px rgba(60, 40, 90, 0.08);
+}
+
+:root[data-theme="dark"] {
+  --cor-primaria: #a488e0;
+  --cor-primaria-escura: #c3aef0;
+  --cor-fundo: #17151b;
+  --cor-superficie: #221f28;
+  --cor-borda: #37323f;
+  --cor-texto: #ede9f2;
+  --cor-texto-secundario: #ada4b8;
+  --cor-perigo: #e88a7d;
+  --cor-perigo-fundo: #3a2320;
+  --cor-sucesso: #7fd8a4;
+  --sombra: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -379,7 +409,9 @@ main {
   padding: 4px 8px 4px 0;
 }
 
-.excluir-medicao {
+.medicao-acoes {
+  display: flex;
+  gap: 8px;
   margin-top: 8px;
 }
 

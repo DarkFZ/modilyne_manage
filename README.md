@@ -1,13 +1,13 @@
-# Atelier de Costura — Módulos de Lógica (PWA local-first)
+# Modilyne (PWA local-first)
 
-Módulos de lógica pura em JavaScript ES6 para uma PWA de atelier de costura.
+PWA de atelier de costura, com módulos de lógica pura em JavaScript ES6.
 Sem backend: toda a base de clientes vive no `LocalStorage` do navegador, sob
 a chave `clientes_estilista`. Nenhum dado sai da máquina do usuário a menos
 que ele exporte um backup manualmente.
 
-Este repositório contém **só a lógica** (`js/`) — nenhum HTML/CSS decorativo.
-A UI é responsabilidade de outra camada, que deve importar exclusivamente de
-`js/index.js`.
+A lógica (`js/*Repository.js`, `validators.js`, `storage.js`, `backupService.js`)
+é isolada de DOM/UI e reexportada por `js/index.js`, único ponto de import
+usado pela camada de interface (`index.html`, `css/style.css`, `js/app.js`).
 
 ## Estrutura
 
@@ -76,6 +76,7 @@ ficam ausentes), para que o schema seja previsível em qualquer registro.
 | `salvarCliente(clienteObjeto)` | Cria (sem `id`) ou atualiza dados cadastrais (com `id` existente). Nunca sobrescreve `historicoMedidas` na atualização. |
 | `excluirCliente(id)` | Remove o cliente e todo o histórico. |
 | `adicionarNovaMedicao(clienteId, dadosMedidas, nomeEvento)` | Insere uma medição no topo do histórico. |
+| `editarMedicao(clienteId, idMedicao, dadosMedidas, nomeEvento)` | Atualiza os campos de uma medição já registrada, sem mudar sua posição no histórico. |
 | `excluirMedicao(clienteId, idMedicao)` | Remove uma medição específica (registro por engano). |
 | `obterUltimaMedicao(clienteId)` | Medição mais recente (`historicoMedidas[0]`) ou `null`. |
 | `compararMedicoes(clienteId, idRecente, idAnterior)` | Diff campo a campo entre duas medições (`{ anterior, recente, diferenca }`). |
