@@ -48,3 +48,15 @@ export function diasDesde(dataISO) {
   if (Number.isNaN(referencia)) return Infinity;
   return Math.floor((Date.now() - referencia) / (1000 * 60 * 60 * 24));
 }
+
+/**
+ * Calcula quantos dias faltam entre agora e uma data ISO futura (negativo
+ * se a data já passou). Usado para o aviso de entrega prevista dos pedidos.
+ * @param {string} dataISO
+ * @returns {number|null} null se a data for inválida.
+ */
+export function diasAte(dataISO) {
+  const referencia = new Date(dataISO).getTime();
+  if (Number.isNaN(referencia)) return null;
+  return Math.ceil((referencia - Date.now()) / (1000 * 60 * 60 * 24));
+}

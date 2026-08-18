@@ -9,35 +9,37 @@ import {
   buscarClientesPorNome,
   salvarCliente,
   excluirCliente,
-  adicionarNovaMedicao,
-  editarMedicao,
-  excluirMedicao,
-  obterUltimaMedicao,
-  compararMedicoes,
+  atualizarMedidas,
+  adicionarPedido,
+  editarPedido,
+  atualizarStatusPedido,
+  excluirPedido,
+  obterPedidosProximosPrazo,
+  marcarNotificacaoEnviada,
   listarClientesInativos,
   exportarBackupJSON,
   exportarClienteIndividualJSON,
   importarBackupJSON,
   apagarTodosDados,
-  diasDesde
+  diasDesde,
+  diasAte,
+  STATUS_PEDIDO,
+  DIAS_AVISO_ENTREGA
 } from './index.js';
 
 const CAMPOS_MEDIDAS = {
   superior: {
-    busto: 'Busto', subbusto: 'Sub-busto', separacaoBusto: 'Separação busto',
-    alturaBusto: 'Altura busto', cinturaAlta: 'Cintura alta', ombroAOmbro: 'Ombro a ombro',
-    comprimentoOmbro: 'Comprimento ombro', larguraCostas: 'Largura costas',
-    comprimentoBraco: 'Comprimento braço', bicep: 'Bíceps', pulso: 'Pulso'
+    ombro: 'Ombro', busto: 'Busto', cinturaAlta: 'Cintura alta', cintura: 'Cintura',
+    ombroCintura: 'Ombro à cintura', braco: 'Braço'
   },
   inferior: {
-    quadril: 'Quadril', alturaQuadril: 'Altura quadril', ganchoTotal: 'Gancho total',
-    coxa: 'Coxa', joelho: 'Joelho', cinturaAoChao: 'Cintura ao chão'
-  },
-  geral: { altura: 'Altura', peso: 'Peso' }
+    quadril: 'Quadril', cinturaJoelho: 'Cintura ao joelho', cinturaPe: 'Cintura ao pé'
+  }
 };
 
 const estado = {
-  clienteAtualId: null
+  clienteAtualId: null,
+  abaAtual: 'perfil'
 };
 
 const el = (id) => document.getElementById(id);
@@ -57,7 +59,7 @@ document.querySelectorAll('[data-voltar-para]').forEach((botao) => {
       renderLista();
       mostrarView('lista');
     } else if (destino === 'detalhe') {
-      abrirDetalheCliente(estado.clienteAtualId, 'medidas');
+      abrirDetalheCliente(estado.clienteAtualId, estado.abaAtual);
     }
   });
 });
@@ -111,6 +113,7 @@ function confirmar(mensagem) {
 // ---------- Formatação ----------
 
 function formatarData(dataISO) {
+  if (!dataISO) return '—';
   const data = new Date(dataISO);
   if (Number.isNaN(data.getTime())) return '—';
   return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -120,30 +123,59 @@ function formatarValor(valor) {
   return valor === null || valor === undefined || valor === '' ? '—' : valor;
 }
 
+function formatarPreco(preco) {
+  return typeof preco === 'number'
+    ? preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : '—';
+}
+
+function formatarPrazo(diasRestantes) {
+  if (diasRestantes === null || diasRestantes === undefined) return '';
+  if (diasRestantes < 0) return `Atrasado ${Math.abs(diasRestantes)} dia(s)`;
+  if (diasRestantes === 0) return 'Entrega hoje';
+  if (diasRestantes === 1) return 'Entrega amanhã';
+  return `Faltam ${diasRestantes} dias`;
+}
+
 // ---------- Lista de clientes ----------
 
 function renderLista(termoBusca = '') {
   el('campo-busca').value = termoBusca;
-  const clientes = termoBusca ? buscarClientesPorNome(termoBusca) : obterTodosClientes();
+  const clientes = (termoBusca ? buscarClientesPorNome(termoBusca) : obterTodosClientes()).slice().reverse();
   const container = el('lista-clientes');
   container.innerHTML = '';
 
   el('lista-vazia').classList.toggle('escondido', clientes.length > 0);
 
   for (const cliente of clientes) {
-    const ultimaMedicao = cliente.historicoMedidas[0];
+    const pedidosAbertos = cliente.pedidos.filter((pedido) => pedido.status !== 'entregue').length;
+    const proximoPrazo = cliente.pedidos
+      .filter((pedido) => pedido.status !== 'entregue' && pedido.dataEntregaPrevista)
+      .map((pedido) => diasAte(pedido.dataEntregaPrevista))
+      .filter((dias) => dias !== null && dias <= DIAS_AVISO_ENTREGA)
+      .sort((a, b) => a - b)[0];
+
     const cartao = document.createElement('div');
     cartao.className = 'cartao-cliente';
     cartao.innerHTML = `
       <h3></h3>
       <p class="tel"></p>
-      <p class="ultima"></p>
+      <p class="pedidos"></p>
+      <p class="aviso-prazo escondido"></p>
     `;
     cartao.querySelector('h3').textContent = cliente.nome;
     cartao.querySelector('.tel').textContent = cliente.telefone || 'Sem telefone';
-    cartao.querySelector('.ultima').textContent = ultimaMedicao
-      ? `Última medição: ${formatarData(ultimaMedicao.data)}`
-      : 'Sem medições registradas';
+    cartao.querySelector('.pedidos').textContent = pedidosAbertos > 0
+      ? `${pedidosAbertos} pedido(s) em andamento`
+      : 'Sem pedidos em andamento';
+
+    if (proximoPrazo !== undefined) {
+      const aviso = cartao.querySelector('.aviso-prazo');
+      aviso.textContent = formatarPrazo(proximoPrazo);
+      aviso.classList.remove('escondido');
+      aviso.classList.add(proximoPrazo < 0 ? 'aviso-atrasado' : 'aviso-proximo');
+    }
+
     cartao.addEventListener('click', () => abrirDetalheCliente(cliente.id, 'perfil'));
     container.appendChild(cartao);
   }
@@ -160,9 +192,7 @@ function abrirFormularioCliente(cliente = null) {
   el('cliente-nome').value = cliente?.nome || '';
   el('cliente-telefone').value = cliente?.telefone || '';
   el('cliente-email').value = cliente?.email || '';
-  el('cliente-silhueta').value = cliente?.perfil?.silhueta || '';
-  el('cliente-postura').value = cliente?.perfil?.postura || '';
-  el('cliente-observacoes').value = cliente?.perfil?.observacoes || '';
+  el('cliente-observacoes').value = cliente?.observacoes || '';
   mostrarView('form-cliente');
   el('cliente-nome').focus();
 }
@@ -177,11 +207,7 @@ el('form-cliente').addEventListener('submit', (evento) => {
     nome: el('cliente-nome').value,
     telefone: el('cliente-telefone').value,
     email: el('cliente-email').value,
-    perfil: {
-      silhueta: el('cliente-silhueta').value,
-      postura: el('cliente-postura').value,
-      observacoes: el('cliente-observacoes').value
-    }
+    observacoes: el('cliente-observacoes').value
   });
 
   if (relatarResultado(resultado, id ? 'Dados atualizados.' : 'Cliente cadastrada.')) {
@@ -209,18 +235,17 @@ function abrirDetalheCliente(clienteId, abaInicial = 'perfil') {
 
   el('detalhe-nome').textContent = cliente.nome;
   el('detalhe-contato').textContent = [cliente.telefone, cliente.email].filter(Boolean).join(' · ') || 'Sem contato registrado';
-  el('detalhe-silhueta').textContent = formatarValor(cliente.perfil?.silhueta);
-  el('detalhe-postura').textContent = formatarValor(cliente.perfil?.postura);
-  el('detalhe-observacoes').textContent = formatarValor(cliente.perfil?.observacoes);
+  el('detalhe-observacoes').textContent = formatarValor(cliente.observacoes);
   el('detalhe-cadastro').textContent = formatarData(cliente.dataCadastro);
 
-  renderMedicoes(cliente);
-  renderSelecaoComparacao(cliente);
+  renderMedidas(cliente);
+  renderPedidos(cliente);
   ativarAba(abaInicial);
   mostrarView('detalhe');
 }
 
 function ativarAba(nomeAba) {
+  estado.abaAtual = nomeAba;
   document.querySelectorAll('.aba').forEach((botao) => {
     const ativa = botao.dataset.aba === nomeAba;
     botao.classList.toggle('aba-ativa', ativa);
@@ -245,7 +270,7 @@ el('btn-exportar-ficha').addEventListener('click', () => {
 
 el('btn-excluir-cliente').addEventListener('click', async () => {
   const cliente = obterClientePorId(estado.clienteAtualId);
-  const confirmado = await confirmar(`Excluir "${cliente.nome}" e todo o histórico de medidas? Esta ação não pode ser desfeita.`);
+  const confirmado = await confirmar(`Excluir "${cliente.nome}" e todo o histórico de pedidos? Esta ação não pode ser desfeita.`);
   if (!confirmado) return;
   if (relatarResultado(excluirCliente(estado.clienteAtualId), 'Cliente excluída.')) {
     renderLista();
@@ -253,60 +278,29 @@ el('btn-excluir-cliente').addEventListener('click', async () => {
   }
 });
 
-// ---------- Medidas ----------
+// ---------- Medidas (únicas por cliente, sempre editáveis) ----------
 
-function renderMedicoes(cliente) {
-  const container = el('lista-medicoes');
-  container.innerHTML = '';
-  el('medicoes-vazio').classList.toggle('escondido', cliente.historicoMedidas.length > 0);
+function renderMedidas(cliente) {
+  const medidas = cliente.medidas;
 
-  cliente.historicoMedidas.forEach((medicao, indice) => {
-    const detalhes = document.createElement('details');
-    detalhes.className = 'cartao-medicao';
-    detalhes.open = indice === 0;
+  el('medidas-atualizado').textContent = medidas.atualizadoEm
+    ? `Atualizadas em ${formatarData(medidas.atualizadoEm)}`
+    : 'Ainda não há medidas registradas.';
 
-    const linhas = ['superior', 'inferior', 'geral']
-      .flatMap((grupo) =>
-        Object.entries(CAMPOS_MEDIDAS[grupo]).map(
-          ([campo, rotulo]) => `<tr><td>${rotulo}</td><td>${formatarValor(medicao.medidas[grupo][campo])}</td></tr>`
-        )
-      )
-      .join('');
+  const listaSuperior = el('medidas-superior');
+  listaSuperior.innerHTML = Object.entries(CAMPOS_MEDIDAS.superior)
+    .map(([campo, rotulo]) => `<dt>${rotulo}</dt><dd>${formatarValor(medidas.superior[campo])}${medidas.superior[campo] !== null ? ` ${medidas.unidade}` : ''}</dd>`)
+    .join('');
 
-    detalhes.innerHTML = `
-      <summary>
-        <span>${medicao.evento}</span>
-        <span class="medicao-meta">${formatarData(medicao.data)}</span>
-      </summary>
-      <table class="tabela-medidas">
-        <thead><tr><th>Medida</th><th>Valor (${medicao.unidade})</th></tr></thead>
-        <tbody>${linhas}</tbody>
-      </table>
-      <div class="medicao-acoes">
-        <button class="botao botao-secundario editar-medicao">Editar esta medição</button>
-        <button class="botao botao-perigo excluir-medicao">Excluir esta medição</button>
-      </div>
-    `;
+  const listaInferior = el('medidas-inferior');
+  listaInferior.innerHTML = Object.entries(CAMPOS_MEDIDAS.inferior)
+    .map(([campo, rotulo]) => `<dt>${rotulo}</dt><dd>${formatarValor(medidas.inferior[campo])}${medidas.inferior[campo] !== null ? ` ${medidas.unidade}` : ''}</dd>`)
+    .join('');
 
-    detalhes.querySelector('.editar-medicao').addEventListener('click', (evento) => {
-      evento.preventDefault();
-      abrirFormularioMedicao(medicao);
-    });
-
-    detalhes.querySelector('.excluir-medicao').addEventListener('click', async (evento) => {
-      evento.preventDefault();
-      const confirmado = await confirmar(`Excluir a medição "${medicao.evento}" de ${formatarData(medicao.data)}?`);
-      if (!confirmado) return;
-      if (relatarResultado(excluirMedicao(cliente.id, medicao.idMedicao), 'Medição excluída.')) {
-        abrirDetalheCliente(cliente.id, 'medidas');
-      }
-    });
-
-    container.appendChild(detalhes);
-  });
+  el('medidas-detalhes').textContent = formatarValor(medidas.detalhes);
 }
 
-function construirCamposMedicao() {
+function construirCamposMedidas() {
   for (const grupo of Object.keys(CAMPOS_MEDIDAS)) {
     const container = el(`campos-${grupo}`);
     container.innerHTML = '';
@@ -319,99 +313,187 @@ function construirCamposMedicao() {
   }
 }
 
-function abrirFormularioMedicao(medicao = null) {
-  el('form-medicao').reset();
-  el('medicao-id').value = medicao?.idMedicao || '';
-  el('form-medicao-titulo').textContent = medicao ? 'Editar medição' : 'Nova medição';
-  el('medicao-evento').value = medicao?.evento || '';
-  el('medicao-unidade').value = medicao?.unidade || 'cm';
+el('btn-editar-medidas').addEventListener('click', () => {
+  const cliente = obterClientePorId(estado.clienteAtualId);
+  const medidas = cliente.medidas;
 
-  document.querySelectorAll('#form-medicao input[data-grupo]').forEach((input) => {
-    const valor = medicao ? medicao.medidas[input.dataset.grupo][input.dataset.campo] : null;
+  el('medidas-unidade').value = medidas.unidade || 'cm';
+  el('medidas-campo-detalhes').value = medidas.detalhes || '';
+
+  document.querySelectorAll('#form-medidas input[data-grupo]').forEach((input) => {
+    const valor = medidas[input.dataset.grupo][input.dataset.campo];
     input.value = valor === null || valor === undefined ? '' : valor;
   });
 
-  mostrarView('form-medicao');
-}
+  mostrarView('form-medidas');
+});
 
-el('btn-nova-medicao').addEventListener('click', () => abrirFormularioMedicao());
-
-el('form-medicao').addEventListener('submit', (evento) => {
+el('form-medidas').addEventListener('submit', (evento) => {
   evento.preventDefault();
-  const dadosMedidas = { unidade: el('medicao-unidade').value || 'cm', superior: {}, inferior: {}, geral: {} };
+  const dadosMedidas = { unidade: el('medidas-unidade').value || 'cm', superior: {}, inferior: {}, detalhes: el('medidas-campo-detalhes').value };
 
-  document.querySelectorAll('#form-medicao input[data-grupo]').forEach((input) => {
+  document.querySelectorAll('#form-medidas input[data-grupo]').forEach((input) => {
     const valor = input.value.trim();
     dadosMedidas[input.dataset.grupo][input.dataset.campo] = valor === '' ? null : Number(valor);
   });
 
-  const idMedicao = el('medicao-id').value;
-  const resultado = idMedicao
-    ? editarMedicao(estado.clienteAtualId, idMedicao, dadosMedidas, el('medicao-evento').value)
-    : adicionarNovaMedicao(estado.clienteAtualId, dadosMedidas, el('medicao-evento').value);
-
-  if (relatarResultado(resultado, idMedicao ? 'Medição atualizada.' : 'Medição registrada.')) {
+  const resultado = atualizarMedidas(estado.clienteAtualId, dadosMedidas);
+  if (relatarResultado(resultado, 'Medidas atualizadas.')) {
     abrirDetalheCliente(estado.clienteAtualId, 'medidas');
   }
 });
 
-// ---------- Comparação de medições ----------
+// ---------- Pedidos (kanban de pagamento/processo) ----------
 
-function renderSelecaoComparacao(cliente) {
-  const opcoes = cliente.historicoMedidas
-    .map((m) => `<option value="${m.idMedicao}">${m.evento} — ${formatarData(m.data)}</option>`)
-    .join('');
-  el('select-medicao-recente').innerHTML = opcoes;
-  el('select-medicao-anterior').innerHTML = opcoes;
-  if (cliente.historicoMedidas.length > 1) {
-    el('select-medicao-anterior').selectedIndex = 1;
+function renderPedidos(cliente) {
+  const container = el('kanban-pedidos');
+  container.innerHTML = '';
+  el('pedidos-vazio').classList.toggle('escondido', cliente.pedidos.length > 0);
+
+  for (const status of STATUS_PEDIDO) {
+    const coluna = document.createElement('div');
+    coluna.className = 'kanban-coluna';
+
+    const pedidosDaColuna = cliente.pedidos.filter((pedido) => pedido.status === status.chave);
+
+    coluna.innerHTML = `
+      <h3 class="kanban-coluna-titulo">${status.rotulo} <span class="kanban-contagem">${pedidosDaColuna.length}</span></h3>
+      <div class="kanban-cartoes"></div>
+    `;
+
+    const cartoesContainer = coluna.querySelector('.kanban-cartoes');
+    pedidosDaColuna.forEach((pedido) => {
+      cartoesContainer.appendChild(criarCartaoPedido(cliente, pedido, status.chave));
+    });
+
+    container.appendChild(coluna);
   }
-  el('resultado-comparacao').innerHTML = '';
 }
 
-el('btn-comparar').addEventListener('click', () => {
-  const idRecente = el('select-medicao-recente').value;
-  const idAnterior = el('select-medicao-anterior').value;
-  const container = el('resultado-comparacao');
+function criarCartaoPedido(cliente, pedido, statusAtual) {
+  const indiceAtual = STATUS_PEDIDO.findIndex((s) => s.chave === statusAtual);
+  const diasRestantes = pedido.dataEntregaPrevista ? diasAte(pedido.dataEntregaPrevista) : null;
 
-  if (!idRecente || !idAnterior) {
-    container.innerHTML = '<p class="estado-vazio">É preciso ter ao menos duas medições para comparar.</p>';
-    return;
-  }
-  if (idRecente === idAnterior) {
-    container.innerHTML = '<p class="estado-vazio">Escolha duas medições diferentes.</p>';
-    return;
-  }
+  const cartao = document.createElement('div');
+  cartao.className = 'kanban-cartao';
 
-  const resultado = compararMedicoes(estado.clienteAtualId, idRecente, idAnterior);
-  if (!resultado.sucesso) {
-    toast(resultado.erro, 'erro');
-    return;
+  let classeAviso = '';
+  let textoAviso = '';
+  if (diasRestantes !== null && statusAtual !== 'entregue') {
+    textoAviso = formatarPrazo(diasRestantes);
+    classeAviso = diasRestantes < 0 ? 'aviso-atrasado' : diasRestantes <= DIAS_AVISO_ENTREGA ? 'aviso-proximo' : '';
   }
 
-  const linhas = ['superior', 'inferior', 'geral']
-    .flatMap((grupo) =>
-      Object.entries(CAMPOS_MEDIDAS[grupo]).map(([campo, rotulo]) => {
-        const diff = resultado.diffs[grupo][campo];
-        const classeDiferenca = diff.diferenca > 0 ? 'diferenca-positiva' : diff.diferenca < 0 ? 'diferenca-negativa' : '';
-        const sinal = diff.diferenca > 0 ? '+' : '';
-        return `<tr>
-          <td>${rotulo}</td>
-          <td>${formatarValor(diff.anterior)}</td>
-          <td>${formatarValor(diff.recente)}</td>
-          <td class="${classeDiferenca}">${diff.diferenca === null ? '—' : sinal + diff.diferenca}</td>
-        </tr>`;
-      })
-    )
-    .join('');
-
-  container.innerHTML = `
-    <table class="tabela-medidas">
-      <thead><tr><th>Medida</th><th>Anterior</th><th>Recente</th><th>Diferença</th></tr></thead>
-      <tbody>${linhas}</tbody>
-    </table>
+  cartao.innerHTML = `
+    <p class="kanban-cartao-titulo"></p>
+    <p class="kanban-cartao-preco"></p>
+    <p class="kanban-cartao-entrega"></p>
+    ${textoAviso ? `<p class="kanban-cartao-aviso ${classeAviso}">${textoAviso}</p>` : ''}
+    <div class="kanban-cartao-acoes">
+      <button class="botao-icone-pequeno botao-voltar-etapa" title="Etapa anterior" ${indiceAtual === 0 ? 'disabled' : ''}>&larr;</button>
+      <button class="botao-icone-pequeno botao-avancar-etapa" title="Próxima etapa" ${indiceAtual === STATUS_PEDIDO.length - 1 ? 'disabled' : ''}>&rarr;</button>
+      <button class="botao-icone-pequeno botao-editar-pedido" title="Editar pedido">✎</button>
+      <button class="botao-icone-pequeno botao-excluir-pedido" title="Excluir pedido">🗑</button>
+    </div>
   `;
+
+  cartao.querySelector('.kanban-cartao-titulo').textContent = pedido.descricao;
+  cartao.querySelector('.kanban-cartao-preco').textContent = formatarPreco(pedido.preco);
+  cartao.querySelector('.kanban-cartao-entrega').textContent = pedido.dataEntregaPrevista
+    ? `Entrega: ${formatarData(pedido.dataEntregaPrevista)}`
+    : 'Sem data de entrega definida';
+
+  cartao.querySelector('.botao-voltar-etapa').addEventListener('click', () => {
+    if (indiceAtual === 0) return;
+    moverStatusPedido(pedido.idPedido, STATUS_PEDIDO[indiceAtual - 1].chave);
+  });
+  cartao.querySelector('.botao-avancar-etapa').addEventListener('click', () => {
+    if (indiceAtual === STATUS_PEDIDO.length - 1) return;
+    moverStatusPedido(pedido.idPedido, STATUS_PEDIDO[indiceAtual + 1].chave);
+  });
+  cartao.querySelector('.botao-editar-pedido').addEventListener('click', () => abrirFormularioPedido(pedido));
+  cartao.querySelector('.botao-excluir-pedido').addEventListener('click', async () => {
+    const confirmado = await confirmar(`Excluir o pedido "${pedido.descricao}"?`);
+    if (!confirmado) return;
+    if (relatarResultado(excluirPedido(cliente.id, pedido.idPedido), 'Pedido excluído.')) {
+      abrirDetalheCliente(cliente.id, 'pedidos');
+    }
+  });
+
+  return cartao;
+}
+
+function moverStatusPedido(idPedido, novoStatus) {
+  const resultado = atualizarStatusPedido(estado.clienteAtualId, idPedido, novoStatus);
+  if (relatarResultado(resultado, 'Status do pedido atualizado.')) {
+    abrirDetalheCliente(estado.clienteAtualId, 'pedidos');
+  }
+}
+
+function abrirFormularioPedido(pedido = null) {
+  el('form-pedido').reset();
+  el('pedido-id').value = pedido?.idPedido || '';
+  el('form-pedido-titulo').textContent = pedido ? 'Editar pedido' : 'Novo pedido';
+  el('pedido-descricao').value = pedido?.descricao || '';
+  el('pedido-preco').value = pedido?.preco ?? '';
+  el('pedido-data-entrega').value = pedido?.dataEntregaPrevista || '';
+  mostrarView('form-pedido');
+  el('pedido-descricao').focus();
+}
+
+el('btn-novo-pedido').addEventListener('click', () => abrirFormularioPedido());
+
+el('form-pedido').addEventListener('submit', (evento) => {
+  evento.preventDefault();
+  const dadosPedido = {
+    descricao: el('pedido-descricao').value,
+    preco: el('pedido-preco').value === '' ? null : Number(el('pedido-preco').value),
+    dataEntregaPrevista: el('pedido-data-entrega').value
+  };
+
+  const idPedido = el('pedido-id').value;
+  const resultado = idPedido
+    ? editarPedido(estado.clienteAtualId, idPedido, dadosPedido)
+    : adicionarPedido(estado.clienteAtualId, dadosPedido);
+
+  if (relatarResultado(resultado, idPedido ? 'Pedido atualizado.' : 'Pedido registrado.')) {
+    abrirDetalheCliente(estado.clienteAtualId, 'pedidos');
+  }
 });
+
+// ---------- Aviso de entregas próximas ----------
+
+async function verificarPedidosProximos() {
+  const proximos = obterPedidosProximosPrazo(DIAS_AVISO_ENTREGA);
+  if (proximos.length === 0) return;
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const pendentesDeAviso = proximos.filter(({ pedido }) => pedido.ultimaNotificacao !== hoje);
+  if (pendentesDeAviso.length === 0) return;
+
+  if (pendentesDeAviso.length === 1) {
+    const { clienteNome, pedido, diasRestantes } = pendentesDeAviso[0];
+    toast(`${clienteNome} — ${pedido.descricao}: ${formatarPrazo(diasRestantes)}.`, diasRestantes < 0 ? 'erro' : 'neutro');
+  } else {
+    toast(`${pendentesDeAviso.length} pedidos com entrega próxima ou atrasada.`, 'neutro');
+  }
+
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+    if (Notification.permission === 'granted') {
+      pendentesDeAviso.forEach(({ clienteNome, pedido, diasRestantes }) => {
+        new Notification(`${clienteNome} — entrega próxima`, {
+          body: `${pedido.descricao}: ${formatarPrazo(diasRestantes)}.`,
+          icon: 'assets/Modilyne_logo.svg'
+        });
+      });
+    }
+  }
+
+  pendentesDeAviso.forEach(({ clienteId, pedido }) => marcarNotificacaoEnviada(clienteId, pedido.idPedido, hoje));
+}
 
 // ---------- Clientes inativas ----------
 
@@ -422,7 +504,7 @@ function renderInativas() {
   el('inativas-vazio').classList.toggle('escondido', clientes.length > 0);
 
   for (const cliente of clientes) {
-    const referencia = cliente.historicoMedidas[0]?.data || cliente.dataCadastro;
+    const referencia = cliente.pedidos[0]?.dataCriacao || cliente.dataCadastro;
     const cartao = document.createElement('div');
     cartao.className = 'cartao-cliente';
     cartao.innerHTML = `<h3></h3><p></p>`;
@@ -520,9 +602,10 @@ aplicarTema(obterTemaEfetivo());
 
 // ---------- Inicialização ----------
 
-construirCamposMedicao();
+construirCamposMedidas();
 renderLista();
 mostrarView('lista');
+verificarPedidosProximos();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

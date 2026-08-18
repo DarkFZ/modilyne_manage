@@ -84,7 +84,7 @@ body {
 
 /* Topbar */
 .topbar {
-  position: sticky;
+  position:sticky;
   top: 0;
   z-index: 10;
   display: flex;
@@ -97,10 +97,20 @@ body {
   border-bottom: 1px solid var(--cor-borda);
 }
 
-.topbar-titulo {
-  margin: 0;
-  font-size: 1.25rem;
-  color: var(--cor-primaria-escura);
+.topbar-marca {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: var(--raio);
+  padding: 6px 12px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  display: block;
+  height: clamp(36px, 6vw, 56px);
+  width: auto;
 }
 
 .topbar-acoes {
@@ -363,73 +373,148 @@ main {
   margin: 0;
 }
 
-/* Measurements list */
-.lista-medicoes {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* Medidas (únicas por cliente) */
+#aba-medidas .fieldset {
   margin-top: 14px;
 }
 
-.cartao-medicao {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  padding: 12px 14px;
-}
-
-.cartao-medicao summary {
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.95rem;
-}
-
-.cartao-medicao .medicao-meta {
-  color: var(--cor-texto-secundario);
-  font-size: 0.8rem;
-}
-
-.tabela-medidas {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+#medidas-atualizado {
+  margin: 10px 0 0;
   font-size: 0.85rem;
 }
 
-.tabela-medidas th {
-  text-align: left;
-  color: var(--cor-texto-secundario);
-  padding: 4px 8px 4px 0;
-  font-weight: 500;
+.texto-medidas-detalhes {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
-.tabela-medidas td {
-  padding: 4px 8px 4px 0;
+/* Aviso de prazo de entrega */
+.aviso-prazo {
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
-.medicao-acoes {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
+.aviso-proximo {
+  background: #fff2cf;
+  color: #8a6300;
 }
 
-/* Comparison */
-.comparar-selecao {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: end;
-  margin-bottom: 16px;
-}
-
-.diferenca-positiva {
+.aviso-atrasado {
+  background: var(--cor-perigo-fundo);
   color: var(--cor-perigo);
 }
 
-.diferenca-negativa {
-  color: var(--cor-sucesso);
+@media (prefers-color-scheme: dark) {
+  .aviso-proximo {
+    background: #4a3d14;
+    color: #f0cf6a;
+  }
+}
+:root[data-theme="dark"] .aviso-proximo {
+  background: #4a3d14;
+  color: #f0cf6a;
+}
+
+/* Kanban de pedidos */
+.kanban {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.kanban-coluna {
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 10px;
+  min-width: 220px;
+  flex: 1 0 220px;
+}
+
+.kanban-coluna-titulo {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--cor-primaria-escura);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kanban-contagem {
+  background: var(--cor-borda);
+  color: var(--cor-texto-secundario);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  padding: 1px 7px;
+}
+
+.kanban-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kanban-cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 10px;
+  box-shadow: var(--sombra);
+}
+
+.kanban-cartao-titulo {
+  margin: 0 0 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.kanban-cartao-preco,
+.kanban-cartao-entrega {
+  margin: 2px 0;
+  font-size: 0.8rem;
+  color: var(--cor-texto-secundario);
+}
+
+.kanban-cartao-aviso {
+  display: inline-block;
+  margin: 6px 0 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.kanban-cartao-acoes {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.botao-icone-pequeno {
+  background: none;
+  border: 1px solid var(--cor-borda);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--cor-texto);
+}
+
+.botao-icone-pequeno:hover {
+  filter: brightness(0.95);
+}
+
+.botao-icone-pequeno:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 /* Toast */

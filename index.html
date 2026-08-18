@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Modilyne</title>
-  <meta name="description" content="Modilyne — cadastro de clientes e histórico de medidas para atelier de costura, 100% local, sem servidor." />
+  <meta name="description" content="Modilyne — cadastro de clientes, medidas e pedidos para atelier de costura, 100% local, sem servidor." />
   <meta name="theme-color" content="#7c5cbf" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="assets/Modilyne_logo.svg" type="image/svg+xml" />
@@ -14,7 +14,9 @@
 <body>
   <div id="app">
     <header class="topbar">
-      <h1 class="topbar-titulo">Modilyne</h1>
+      <div class="topbar-marca">
+        <img class="topbar-logo" src="assets/Modilyne_logo.svg" alt="Modilyne" />
+      </div>
       <div class="topbar-acoes">
         <input id="campo-busca" class="campo-busca" type="search" placeholder="Buscar cliente..." aria-label="Buscar cliente" />
         <button id="btn-nova-cliente" class="botao botao-primario">+ Nova cliente</button>
@@ -59,21 +61,10 @@
             <span>E-mail</span>
             <input type="email" id="cliente-email" autocomplete="email" />
           </label>
-          <fieldset class="fieldset">
-            <legend>Perfil</legend>
-            <label class="campo">
-              <span>Silhueta</span>
-              <input type="text" id="cliente-silhueta" />
-            </label>
-            <label class="campo">
-              <span>Postura</span>
-              <input type="text" id="cliente-postura" />
-            </label>
-            <label class="campo">
-              <span>Observações</span>
-              <textarea id="cliente-observacoes" rows="3"></textarea>
-            </label>
-          </fieldset>
+          <label class="campo">
+            <span>Observações</span>
+            <textarea id="cliente-observacoes" rows="3"></textarea>
+          </label>
           <div class="acoes-formulario">
             <button type="submit" class="botao botao-primario">Salvar</button>
             <button type="button" class="botao botao-secundario" data-voltar-para="lista">Cancelar</button>
@@ -100,15 +91,11 @@
         <div class="abas" role="tablist">
           <button class="aba aba-ativa" data-aba="perfil" role="tab" aria-selected="true">Perfil</button>
           <button class="aba" data-aba="medidas" role="tab" aria-selected="false">Medidas</button>
-          <button class="aba" data-aba="comparar" role="tab" aria-selected="false">Comparar</button>
+          <button class="aba" data-aba="pedidos" role="tab" aria-selected="false">Pedidos</button>
         </div>
 
         <div id="aba-perfil" class="painel-aba">
           <dl class="lista-definicao">
-            <dt>Silhueta</dt>
-            <dd id="detalhe-silhueta"></dd>
-            <dt>Postura</dt>
-            <dd id="detalhe-postura"></dd>
             <dt>Observações</dt>
             <dd id="detalhe-observacoes"></dd>
             <dt>Cadastrada em</dt>
@@ -117,40 +104,40 @@
         </div>
 
         <div id="aba-medidas" class="painel-aba escondido">
-          <button id="btn-nova-medicao" class="botao botao-primario">+ Nova medição</button>
-          <div id="lista-medicoes" class="lista-medicoes"></div>
-          <p id="medicoes-vazio" class="estado-vazio escondido">Nenhuma medição registrada ainda.</p>
+          <button id="btn-editar-medidas" class="botao botao-primario">Editar medidas</button>
+          <p id="medidas-atualizado" class="texto-secundario"></p>
+
+          <fieldset class="fieldset">
+            <legend>Superior</legend>
+            <dl id="medidas-superior" class="lista-definicao"></dl>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>Inferior</legend>
+            <dl id="medidas-inferior" class="lista-definicao"></dl>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <legend>Detalhes</legend>
+            <p id="medidas-detalhes" class="texto-medidas-detalhes"></p>
+          </fieldset>
         </div>
 
-        <div id="aba-comparar" class="painel-aba escondido">
-          <div class="comparar-selecao">
-            <label class="campo">
-              <span>Medição mais recente</span>
-              <select id="select-medicao-recente"></select>
-            </label>
-            <label class="campo">
-              <span>Medição anterior</span>
-              <select id="select-medicao-anterior"></select>
-            </label>
-            <button id="btn-comparar" class="botao botao-primario">Comparar</button>
-          </div>
-          <div id="resultado-comparacao"></div>
+        <div id="aba-pedidos" class="painel-aba escondido">
+          <button id="btn-novo-pedido" class="botao botao-primario">+ Novo pedido</button>
+          <div id="kanban-pedidos" class="kanban"></div>
+          <p id="pedidos-vazio" class="estado-vazio escondido">Nenhum pedido registrado ainda.</p>
         </div>
       </section>
 
-      <!-- Formulário de nova medição -->
-      <section id="view-form-medicao" class="view escondido">
+      <!-- Formulário de edição de medidas -->
+      <section id="view-form-medidas" class="view escondido">
         <button class="botao-voltar" data-voltar-para="detalhe">&larr; Voltar</button>
-        <h2 id="form-medicao-titulo">Nova medição</h2>
-        <form id="form-medicao" class="formulario">
-          <input type="hidden" id="medicao-id" />
-          <label class="campo">
-            <span>Evento / vestido</span>
-            <input type="text" id="medicao-evento" placeholder="Ex: Vestido de festa" />
-          </label>
+        <h2>Editar medidas</h2>
+        <form id="form-medidas" class="formulario">
           <label class="campo campo-curto">
             <span>Unidade</span>
-            <input type="text" id="medicao-unidade" value="cm" />
+            <input type="text" id="medidas-unidade" value="cm" />
           </label>
 
           <fieldset class="fieldset">
@@ -163,13 +150,38 @@
             <div id="campos-inferior" class="grade-campos"></div>
           </fieldset>
 
-          <fieldset class="fieldset">
-            <legend>Geral</legend>
-            <div id="campos-geral" class="grade-campos"></div>
-          </fieldset>
+          <label class="campo">
+            <span>Detalhes</span>
+            <textarea id="medidas-campo-detalhes" rows="3"></textarea>
+          </label>
 
           <div class="acoes-formulario">
-            <button type="submit" class="botao botao-primario">Salvar medição</button>
+            <button type="submit" class="botao botao-primario">Salvar medidas</button>
+            <button type="button" class="botao botao-secundario" data-voltar-para="detalhe">Cancelar</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Formulário de pedido (novo / editar) -->
+      <section id="view-form-pedido" class="view escondido">
+        <button class="botao-voltar" data-voltar-para="detalhe">&larr; Voltar</button>
+        <h2 id="form-pedido-titulo">Novo pedido</h2>
+        <form id="form-pedido" class="formulario">
+          <input type="hidden" id="pedido-id" />
+          <label class="campo">
+            <span>Peça / descrição *</span>
+            <input type="text" id="pedido-descricao" placeholder="Ex: Vestido de festa" required />
+          </label>
+          <label class="campo campo-curto">
+            <span>Preço (R$)</span>
+            <input type="number" step="0.01" min="0" id="pedido-preco" />
+          </label>
+          <label class="campo campo-curto">
+            <span>Entrega prevista</span>
+            <input type="date" id="pedido-data-entrega" />
+          </label>
+          <div class="acoes-formulario">
+            <button type="submit" class="botao botao-primario">Salvar pedido</button>
             <button type="button" class="botao botao-secundario" data-voltar-para="detalhe">Cancelar</button>
           </div>
         </form>
@@ -179,7 +191,7 @@
       <section id="view-inativas" class="view escondido">
         <button class="botao-voltar" data-voltar-para="lista">&larr; Voltar</button>
         <h2>Clientes inativas</h2>
-        <p class="texto-secundario">Sem medição (ou cadastro) há mais de 180 dias.</p>
+        <p class="texto-secundario">Sem pedido (ou cadastro) há mais de 180 dias.</p>
         <div id="lista-inativas" class="grid-clientes"></div>
         <p id="inativas-vazio" class="estado-vazio escondido">Nenhuma cliente inativa no momento.</p>
       </section>

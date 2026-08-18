@@ -9,9 +9,9 @@
  */
 
 import { lerStorage, gravarStorage } from './storage.js';
-import { gerarId, dataAtualISO, diasDesde } from './utils.js';
-import { criarEstruturaMedidasVazia, validarClienteBasico } from './validators.js';
-import { UNIDADE_PADRAO } from './constants.js';
+import { gerarId, dataAtualISO, diasDesde, diasAte } from './utils.js';
+import { criarMedidasVazias, validarClienteBasico, validarPedidoBasico } from './validators.js';
+import { DIAS_AVISO_ENTREGA } from './constants.js';
 
 /**
  * Retorna todos os clientes cadastrados.
@@ -45,10 +45,10 @@ export function buscarClientesPorNome(termo) {
 
 /**
  * Cria ou atualiza um cliente.
- * - Sem 'id' (ou id inexistente na base): cria um novo registro, gerando id
- *   e dataCadastro, com historicoMedidas vazio.
+ * - Sem 'id' (ou id inexistente na base): cria um novo registro, gerando id,
+ *   dataCadastro, medidas vazias (únicas e editáveis) e lista de pedidos vazia.
  * - Com 'id' existente: atualiza apenas os dados cadastrais (nome, telefone,
- *   email, perfil), preservando o historicoMedidas já armazenado.
+ *   email, observações), preservando medidas e pedidos já armazenados.
  * @param {Partial<import('./validators.js').Cliente>} clienteObjeto
  * @returns {{sucesso: boolean, cliente?: import('./validators.js').Cliente, erro?: string}}
  */
@@ -71,12 +71,9 @@ export function salvarCliente(clienteObjeto) {
       telefone: clienteObjeto.telefone ?? '',
       email: clienteObjeto.email ?? '',
       dataCadastro: dataAtualISO(),
-      perfil: {
-        silhueta: clienteObjeto.perfil?.silhueta ?? '',
-        postura: clienteObjeto.perfil?.postura ?? '',
-        observacoes: clienteObjeto.perfil?.observacoes ?? ''
-      },
-      historicoMedidas: []
+      observacoes: clienteObjeto.observacoes ?? '',
+      medidas: criarMedidasVazias(),
+      pedidos: []
     };
 
     clientes.push(novoCliente);
@@ -93,13 +90,11 @@ export function salvarCliente(clienteObjeto) {
     nome: clienteObjeto.nome.trim(),
     telefone: clienteObjeto.telefone ?? clienteAtual.telefone,
     email: clienteObjeto.email ?? clienteAtual.email,
-    perfil: {
-      silhueta: clienteObjeto.perfil?.silhueta ?? clienteAtual.perfil.silhueta,
-      postura: clienteObjeto.perfil?.postura ?? clienteAtual.perfil.postura,
-      observacoes: clienteObjeto.perfil?.observacoes ?? clienteAtual.perfil.observacoes
-    },
-    // historicoMedidas nunca é aceito via este método — só por adicionarNovaMedicao/excluirMedicao.
-    historicoMedidas: clienteAtual.historicoMedidas
+    observacoes: clienteObjeto.observacoes ?? clienteAtual.observacoes,
+    // medidas e pedidos nunca são aceitos via este método — só pelas
+    // funções dedicadas abaixo (atualizarMedidas / *Pedido).
+    medidas: clienteAtual.medidas,
+    pedidos: clienteAtual.pedidos
   };
 
   clientes[indiceExistente] = clienteAtualizado;
@@ -110,7 +105,7 @@ export function salvarCliente(clienteObjeto) {
 }
 
 /**
- * Remove um cliente (e todo seu histórico) da base local.
+ * Remove um cliente (e todo seu histórico de pedidos) da base local.
  * @param {string} id
  * @returns {{sucesso: boolean, erro?: string}}
  */
@@ -129,174 +124,222 @@ export function excluirCliente(id) {
 }
 
 /**
- * Adiciona uma nova medição ao topo do histórico de um cliente (a mais
- * recente sempre em historicoMedidas[0]). Campos de medida não informados
- * são preenchidos com null, mantendo o schema sempre completo.
+ * Atualiza o conjunto único de medidas de um cliente. Diferente do antigo
+ * histórico de medições, cada cliente tem apenas um conjunto de medidas,
+ * sempre editável — os diferentes pedidos (peças) é que têm seu próprio
+ * histórico, controlado por adicionarPedido/editarPedido.
  * @param {string} clienteId
- * @param {Partial<{superior: object, inferior: object, geral: object, unidade: string}>} dadosMedidas
- * @param {string} nomeEvento - Nome do evento/vestido associado à medição.
- * @returns {{sucesso: boolean, medicao?: import('./validators.js').Medicao, erro?: string}}
+ * @param {Partial<{unidade: string, superior: object, inferior: object, detalhes: string}>} dadosMedidas
+ * @returns {{sucesso: boolean, medidas?: import('./validators.js').Medidas, erro?: string}}
  */
-export function adicionarNovaMedicao(clienteId, dadosMedidas = {}, nomeEvento = '') {
+export function atualizarMedidas(clienteId, dadosMedidas = {}) {
   const clientes = lerStorage();
   const indice = clientes.findIndex((cliente) => cliente.id === clienteId);
   if (indice === -1) {
     return { sucesso: false, erro: 'Cliente não encontrado.' };
   }
 
-  const estruturaVazia = criarEstruturaMedidasVazia();
-  /** @type {import('./validators.js').Medicao} */
-  const novaMedicao = {
-    idMedicao: gerarId('med'),
-    data: dataAtualISO(),
-    evento: nomeEvento?.trim() || 'Sem descrição',
-    unidade: dadosMedidas.unidade || UNIDADE_PADRAO,
-    medidas: {
-      superior: { ...estruturaVazia.superior, ...(dadosMedidas.superior ?? {}) },
-      inferior: { ...estruturaVazia.inferior, ...(dadosMedidas.inferior ?? {}) },
-      geral: { ...estruturaVazia.geral, ...(dadosMedidas.geral ?? {}) }
-    }
+  const medidasAtuais = clientes[indice].medidas ?? criarMedidasVazias();
+  /** @type {import('./validators.js').Medidas} */
+  const medidasAtualizadas = {
+    unidade: dadosMedidas.unidade || medidasAtuais.unidade,
+    atualizadoEm: dataAtualISO(),
+    superior: { ...medidasAtuais.superior, ...(dadosMedidas.superior ?? {}) },
+    inferior: { ...medidasAtuais.inferior, ...(dadosMedidas.inferior ?? {}) },
+    detalhes: dadosMedidas.detalhes ?? medidasAtuais.detalhes
   };
 
-  clientes[indice].historicoMedidas.unshift(novaMedicao);
+  clientes[indice].medidas = medidasAtualizadas;
   if (!gravarStorage(clientes)) {
-    return { sucesso: false, erro: 'Falha ao persistir a nova medição no LocalStorage.' };
+    return { sucesso: false, erro: 'Falha ao persistir a atualização das medidas no LocalStorage.' };
   }
-  return { sucesso: true, medicao: novaMedicao };
+  return { sucesso: true, medidas: medidasAtualizadas };
 }
 
 /**
- * Atualiza os campos de uma medição já registrada (ex: valor digitado
- * errado), sem alterar sua posição no histórico nem o idMedicao. Campos de
- * medida não informados em dadosMedidas mantêm o valor já salvo.
+ * Registra um novo pedido (peça encomendada) para um cliente, entrando no
+ * kanban de processo já na primeira etapa (pagamento_entrada).
  * @param {string} clienteId
- * @param {string} idMedicao
- * @param {Partial<{superior: object, inferior: object, geral: object, unidade: string}>} dadosMedidas
- * @param {string} nomeEvento - Nome do evento/vestido associado à medição.
- * @returns {{sucesso: boolean, medicao?: import('./validators.js').Medicao, erro?: string}}
+ * @param {Partial<{descricao: string, preco: number|null, dataEntregaPrevista: string}>} dadosPedido
+ * @returns {{sucesso: boolean, pedido?: import('./validators.js').Pedido, erro?: string}}
  */
-export function editarMedicao(clienteId, idMedicao, dadosMedidas = {}, nomeEvento = '') {
+export function adicionarPedido(clienteId, dadosPedido = {}) {
+  const validacao = validarPedidoBasico(dadosPedido);
+  if (!validacao.valido) {
+    return { sucesso: false, erro: validacao.erro };
+  }
+
+  const clientes = lerStorage();
+  const indice = clientes.findIndex((cliente) => cliente.id === clienteId);
+  if (indice === -1) {
+    return { sucesso: false, erro: 'Cliente não encontrado.' };
+  }
+
+  /** @type {import('./validators.js').Pedido} */
+  const novoPedido = {
+    idPedido: gerarId('ped'),
+    descricao: dadosPedido.descricao.trim(),
+    preco: dadosPedido.preco === '' || dadosPedido.preco === undefined ? null : Number(dadosPedido.preco),
+    dataCriacao: dataAtualISO(),
+    dataEntregaPrevista: dadosPedido.dataEntregaPrevista || '',
+    status: 'pagamento_entrada',
+    ultimaNotificacao: null
+  };
+
+  clientes[indice].pedidos.unshift(novoPedido);
+  if (!gravarStorage(clientes)) {
+    return { sucesso: false, erro: 'Falha ao persistir o novo pedido no LocalStorage.' };
+  }
+  return { sucesso: true, pedido: novoPedido };
+}
+
+/**
+ * Atualiza os dados (descrição, preço, data prevista) de um pedido já
+ * existente, sem alterar seu status no kanban.
+ * @param {string} clienteId
+ * @param {string} idPedido
+ * @param {Partial<{descricao: string, preco: number|null, dataEntregaPrevista: string}>} dadosPedido
+ * @returns {{sucesso: boolean, pedido?: import('./validators.js').Pedido, erro?: string}}
+ */
+export function editarPedido(clienteId, idPedido, dadosPedido = {}) {
+  const validacao = validarPedidoBasico(dadosPedido);
+  if (!validacao.valido) {
+    return { sucesso: false, erro: validacao.erro };
+  }
+
   const clientes = lerStorage();
   const indiceCliente = clientes.findIndex((cliente) => cliente.id === clienteId);
   if (indiceCliente === -1) {
     return { sucesso: false, erro: 'Cliente não encontrado.' };
   }
 
-  const historico = clientes[indiceCliente].historicoMedidas;
-  const indiceMedicao = historico.findIndex((medicao) => medicao.idMedicao === idMedicao);
-  if (indiceMedicao === -1) {
-    return { sucesso: false, erro: 'Medição não encontrada.' };
+  const pedidos = clientes[indiceCliente].pedidos;
+  const indicePedido = pedidos.findIndex((pedido) => pedido.idPedido === idPedido);
+  if (indicePedido === -1) {
+    return { sucesso: false, erro: 'Pedido não encontrado.' };
   }
 
-  const medicaoAtual = historico[indiceMedicao];
-  /** @type {import('./validators.js').Medicao} */
-  const medicaoAtualizada = {
-    ...medicaoAtual,
-    evento: nomeEvento?.trim() || 'Sem descrição',
-    unidade: dadosMedidas.unidade || medicaoAtual.unidade,
-    medidas: {
-      superior: { ...medicaoAtual.medidas.superior, ...(dadosMedidas.superior ?? {}) },
-      inferior: { ...medicaoAtual.medidas.inferior, ...(dadosMedidas.inferior ?? {}) },
-      geral: { ...medicaoAtual.medidas.geral, ...(dadosMedidas.geral ?? {}) }
-    }
+  const pedidoAtual = pedidos[indicePedido];
+  /** @type {import('./validators.js').Pedido} */
+  const pedidoAtualizado = {
+    ...pedidoAtual,
+    descricao: dadosPedido.descricao.trim(),
+    preco: dadosPedido.preco === '' || dadosPedido.preco === undefined ? null : Number(dadosPedido.preco),
+    dataEntregaPrevista: dadosPedido.dataEntregaPrevista || pedidoAtual.dataEntregaPrevista
   };
 
-  historico[indiceMedicao] = medicaoAtualizada;
+  pedidos[indicePedido] = pedidoAtualizado;
   if (!gravarStorage(clientes)) {
-    return { sucesso: false, erro: 'Falha ao persistir a atualização da medição no LocalStorage.' };
+    return { sucesso: false, erro: 'Falha ao persistir a atualização do pedido no LocalStorage.' };
   }
-  return { sucesso: true, medicao: medicaoAtualizada };
+  return { sucesso: true, pedido: pedidoAtualizado };
 }
 
 /**
- * Remove uma medição específica do histórico de um cliente (ex: registro
- * lançado por engano). Não afeta os demais dados cadastrais.
+ * Move um pedido para outra etapa do kanban de pagamento/processo.
  * @param {string} clienteId
- * @param {string} idMedicao
+ * @param {string} idPedido
+ * @param {string} novoStatus - Uma das chaves de STATUS_PEDIDO.
+ * @returns {{sucesso: boolean, pedido?: import('./validators.js').Pedido, erro?: string}}
+ */
+export function atualizarStatusPedido(clienteId, idPedido, novoStatus) {
+  const clientes = lerStorage();
+  const indiceCliente = clientes.findIndex((cliente) => cliente.id === clienteId);
+  if (indiceCliente === -1) {
+    return { sucesso: false, erro: 'Cliente não encontrado.' };
+  }
+
+  const pedidos = clientes[indiceCliente].pedidos;
+  const indicePedido = pedidos.findIndex((pedido) => pedido.idPedido === idPedido);
+  if (indicePedido === -1) {
+    return { sucesso: false, erro: 'Pedido não encontrado.' };
+  }
+
+  pedidos[indicePedido] = { ...pedidos[indicePedido], status: novoStatus };
+  if (!gravarStorage(clientes)) {
+    return { sucesso: false, erro: 'Falha ao persistir a mudança de status no LocalStorage.' };
+  }
+  return { sucesso: true, pedido: pedidos[indicePedido] };
+}
+
+/**
+ * Remove um pedido específico do histórico de um cliente.
+ * @param {string} clienteId
+ * @param {string} idPedido
  * @returns {{sucesso: boolean, erro?: string}}
  */
-export function excluirMedicao(clienteId, idMedicao) {
+export function excluirPedido(clienteId, idPedido) {
   const clientes = lerStorage();
   const indiceCliente = clientes.findIndex((cliente) => cliente.id === clienteId);
   if (indiceCliente === -1) {
     return { sucesso: false, erro: 'Cliente não encontrado.' };
   }
 
-  const historico = clientes[indiceCliente].historicoMedidas;
-  const existeMedicao = historico.some((medicao) => medicao.idMedicao === idMedicao);
-  if (!existeMedicao) {
-    return { sucesso: false, erro: 'Medição não encontrada.' };
+  const pedidos = clientes[indiceCliente].pedidos;
+  const existePedido = pedidos.some((pedido) => pedido.idPedido === idPedido);
+  if (!existePedido) {
+    return { sucesso: false, erro: 'Pedido não encontrado.' };
   }
 
-  clientes[indiceCliente].historicoMedidas = historico.filter(
-    (medicao) => medicao.idMedicao !== idMedicao
-  );
+  clientes[indiceCliente].pedidos = pedidos.filter((pedido) => pedido.idPedido !== idPedido);
   if (!gravarStorage(clientes)) {
-    return { sucesso: false, erro: 'Falha ao persistir a exclusão da medição no LocalStorage.' };
+    return { sucesso: false, erro: 'Falha ao persistir a exclusão do pedido no LocalStorage.' };
   }
   return { sucesso: true };
 }
 
 /**
- * Retorna a medição mais recente de um cliente (topo do histórico) ou null
- * se ele ainda não tiver nenhuma medição registrada.
+ * Marca que já foi avisado hoje sobre a proximidade de entrega de um
+ * pedido, evitando notificações repetidas a cada vez que o app é aberto.
  * @param {string} clienteId
- * @returns {import('./validators.js').Medicao|null}
+ * @param {string} idPedido
+ * @param {string} dataISO - Data (AAAA-MM-DD) em que o aviso foi emitido.
+ * @returns {boolean}
  */
-export function obterUltimaMedicao(clienteId) {
-  const cliente = obterClientePorId(clienteId);
-  return cliente?.historicoMedidas[0] ?? null;
+export function marcarNotificacaoEnviada(clienteId, idPedido, dataISO) {
+  const clientes = lerStorage();
+  const indiceCliente = clientes.findIndex((cliente) => cliente.id === clienteId);
+  if (indiceCliente === -1) return false;
+
+  const pedidos = clientes[indiceCliente].pedidos;
+  const indicePedido = pedidos.findIndex((pedido) => pedido.idPedido === idPedido);
+  if (indicePedido === -1) return false;
+
+  pedidos[indicePedido] = { ...pedidos[indicePedido], ultimaNotificacao: dataISO };
+  return gravarStorage(clientes);
 }
 
 /**
- * Compara duas medições do mesmo cliente campo a campo, útil para o
- * atelier visualizar rapidamente o que mudou no corpo da cliente entre
- * dois eventos (ex: antes/depois de uma dieta, ou entre duas provas).
- * @param {string} clienteId
- * @param {string} idMedicaoRecente
- * @param {string} idMedicaoAnterior
- * @returns {{sucesso: boolean, diffs?: Object, erro?: string}}
+ * Lista, entre todos os clientes, os pedidos ainda não entregues cuja
+ * entrega prevista está a poucos dias (ou já atrasada), para alimentar o
+ * aviso de "entrega próxima" da UI.
+ * @param {number} [diasAntecedencia=DIAS_AVISO_ENTREGA]
+ * @returns {Array<{clienteId: string, clienteNome: string, pedido: import('./validators.js').Pedido, diasRestantes: number}>}
  */
-export function compararMedicoes(clienteId, idMedicaoRecente, idMedicaoAnterior) {
-  const cliente = obterClientePorId(clienteId);
-  if (!cliente) {
-    return { sucesso: false, erro: 'Cliente não encontrado.' };
-  }
-
-  const recente = cliente.historicoMedidas.find((medicao) => medicao.idMedicao === idMedicaoRecente);
-  const anterior = cliente.historicoMedidas.find((medicao) => medicao.idMedicao === idMedicaoAnterior);
-  if (!recente || !anterior) {
-    return { sucesso: false, erro: 'Uma ou ambas as medições informadas não foram encontradas.' };
-  }
-
-  const diffs = {};
-  for (const grupo of /** @type {const} */ (['superior', 'inferior', 'geral'])) {
-    diffs[grupo] = {};
-    for (const campo of Object.keys(recente.medidas[grupo])) {
-      const valorRecente = recente.medidas[grupo][campo];
-      const valorAnterior = anterior.medidas[grupo][campo];
-      const diferenca =
-        typeof valorRecente === 'number' && typeof valorAnterior === 'number'
-          ? Number((valorRecente - valorAnterior).toFixed(2))
-          : null;
-      diffs[grupo][campo] = { anterior: valorAnterior, recente: valorRecente, diferenca };
+export function obterPedidosProximosPrazo(diasAntecedencia = DIAS_AVISO_ENTREGA) {
+  const resultado = [];
+  for (const cliente of lerStorage()) {
+    for (const pedido of cliente.pedidos) {
+      if (pedido.status === 'entregue' || !pedido.dataEntregaPrevista) continue;
+      const diasRestantes = diasAte(pedido.dataEntregaPrevista);
+      if (diasRestantes === null || diasRestantes > diasAntecedencia) continue;
+      resultado.push({ clienteId: cliente.id, clienteNome: cliente.nome, pedido, diasRestantes });
     }
   }
-
-  return { sucesso: true, diffs };
+  return resultado.sort((a, b) => a.diasRestantes - b.diasRestantes);
 }
 
 /**
- * Lista clientes cuja última medição (ou cadastro, se nunca mediu) está
- * há mais de 'diasLimite' dias, útil para uma tela de "clientes inativas"
- * ou lembretes de recontato.
+ * Lista clientes sem nenhum pedido criado (ou cadastro, se nunca fez
+ * pedido) há mais de 'diasLimite' dias, útil para uma tela de "clientes
+ * inativas" ou lembretes de recontato.
  * @param {number} [diasLimite=180]
  * @returns {import('./validators.js').Cliente[]}
  */
 export function listarClientesInativos(diasLimite = 180) {
   return lerStorage().filter((cliente) => {
-    const ultimaMedicao = cliente.historicoMedidas[0];
-    const dataReferencia = ultimaMedicao ? ultimaMedicao.data : cliente.dataCadastro;
+    const ultimoPedido = cliente.pedidos[0];
+    const dataReferencia = ultimoPedido ? ultimoPedido.dataCriacao : cliente.dataCadastro;
     return diasDesde(dataReferencia) >= diasLimite;
   });
 }

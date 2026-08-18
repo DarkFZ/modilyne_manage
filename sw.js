@@ -1,4 +1,4 @@
-const CACHE_NAME = 'modilyne-v4';
+const CACHE_NAME = 'modilyne-v6';
 
 const ARQUIVOS_ESSENCIAIS = [
   './',
