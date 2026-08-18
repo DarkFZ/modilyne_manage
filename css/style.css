@@ -198,6 +198,11 @@ body {
   overflow: hidden;
 }
 
+.dropdown.dropdown-abre-direita {
+  right: auto;
+  left: 0;
+}
+
 .dropdown-item {
   padding: 10px 14px;
   background: none;

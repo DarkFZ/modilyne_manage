@@ -517,12 +517,23 @@ function renderInativas() {
 
 // ---------- Menu / backup ----------
 
+// Por padrão o menu abre para a esquerda (alinhado à direita do botão).
+// Se isso o levaria para fora da tela — botão perto da borda esquerda —
+// ele abre para a direita em vez disso.
+function posicionarDropdown(dropdown) {
+  dropdown.classList.remove('dropdown-abre-direita');
+  if (dropdown.getBoundingClientRect().left < 0) {
+    dropdown.classList.add('dropdown-abre-direita');
+  }
+}
+
 el('btn-menu').addEventListener('click', (evento) => {
   evento.stopPropagation();
   const dropdown = el('menu-dropdown');
   const aberto = !dropdown.classList.contains('escondido');
   dropdown.classList.toggle('escondido', aberto);
   el('btn-menu').setAttribute('aria-expanded', String(!aberto));
+  if (!aberto) posicionarDropdown(dropdown);
 });
 
 document.addEventListener('click', (evento) => {
