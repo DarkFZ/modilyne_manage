@@ -24,7 +24,12 @@ import {
   diasDesde,
   diasAte,
   STATUS_PEDIDO,
-  DIAS_AVISO_ENTREGA
+  DIAS_AVISO_ENTREGA,
+  PERCENTUAL_MINIMO_ENTRADA,
+  obterDespesasFixas,
+  salvarDespesasFixas,
+  obterFechoDiario,
+  obterGanhoMensal
 } from './index.js';
 
 const CAMPOS_MEDIDAS = {
@@ -50,18 +55,31 @@ function mostrarView(nomeView) {
   document.querySelectorAll('.view').forEach((secao) => secao.classList.add('escondido'));
   el(`view-${nomeView}`).classList.remove('escondido');
   el('menu-dropdown').classList.add('escondido');
+  el('topbar-acoes-lista').classList.toggle('escondido', nomeView !== 'lista');
 }
 
 document.querySelectorAll('[data-voltar-para]').forEach((botao) => {
   botao.addEventListener('click', () => {
     const destino = botao.dataset.voltarPara;
-    if (destino === 'lista') {
+    if (destino === 'home') {
+      mostrarView('home');
+    } else if (destino === 'lista') {
       renderLista();
       mostrarView('lista');
     } else if (destino === 'detalhe') {
       abrirDetalheCliente(estado.clienteAtualId, estado.abaAtual);
     }
   });
+});
+
+el('btn-ir-clientes').addEventListener('click', () => {
+  renderLista();
+  mostrarView('lista');
+});
+
+el('btn-ir-dashboard').addEventListener('click', () => {
+  renderDashboard();
+  mostrarView('dashboard');
 });
 
 // ---------- Toast / feedback ----------
@@ -125,8 +143,17 @@ function formatarValor(valor) {
 
 function formatarPreco(preco) {
   return typeof preco === 'number'
-    ? preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    ? preco.toLocaleString('pt-PT', { style: 'currency', currency: 'CVE' })
     : '—';
+}
+
+function formatarParcelas(pedido) {
+  if (!pedido.numeroParcelas || pedido.numeroParcelas <= 1) return 'À vista';
+  const parcelasRestantes = pedido.numeroParcelas - 1;
+  const valorParcela = pedido.preco !== null && pedido.valorEntrada !== null
+    ? (pedido.preco - pedido.valorEntrada) / parcelasRestantes
+    : null;
+  return `Entrada ${formatarPreco(pedido.valorEntrada)} + ${parcelasRestantes}x ${formatarPreco(valorParcela)}`;
 }
 
 function formatarPrazo(diasRestantes) {
@@ -387,6 +414,8 @@ function criarCartaoPedido(cliente, pedido, statusAtual) {
   cartao.innerHTML = `
     <p class="kanban-cartao-titulo"></p>
     <p class="kanban-cartao-preco"></p>
+    <p class="kanban-cartao-parcelas"></p>
+    <p class="kanban-cartao-materiais"></p>
     <p class="kanban-cartao-entrega"></p>
     ${textoAviso ? `<p class="kanban-cartao-aviso ${classeAviso}">${textoAviso}</p>` : ''}
     <div class="kanban-cartao-acoes">
@@ -399,6 +428,10 @@ function criarCartaoPedido(cliente, pedido, statusAtual) {
 
   cartao.querySelector('.kanban-cartao-titulo').textContent = pedido.descricao;
   cartao.querySelector('.kanban-cartao-preco').textContent = formatarPreco(pedido.preco);
+  cartao.querySelector('.kanban-cartao-parcelas').textContent = formatarParcelas(pedido);
+  cartao.querySelector('.kanban-cartao-materiais').textContent = pedido.custoMateriais !== null
+    ? `Materiais: ${formatarPreco(pedido.custoMateriais)}`
+    : 'Materiais: —';
   cartao.querySelector('.kanban-cartao-entrega').textContent = pedido.dataEntregaPrevista
     ? `Entrega: ${formatarData(pedido.dataEntregaPrevista)}`
     : 'Sem data de entrega definida';
@@ -430,14 +463,57 @@ function moverStatusPedido(idPedido, novoStatus) {
   }
 }
 
+// Recalcula, a cada mudança nos campos de preço/parcelas/entrada, se o
+// campo de entrada deve aparecer e qual o resumo do parcelamento — mesma
+// regra aplicada na validação (validarPedidoBasico), só que aqui é
+// feedback ao vivo, não bloqueia o envio do formulário.
+function atualizarResumoParcelas() {
+  const numeroParcelas = Number(el('pedido-parcelas').value);
+  const campoEntrada = el('campo-pedido-entrada');
+  const resumo = el('pedido-parcelas-resumo');
+
+  campoEntrada.classList.toggle('escondido', numeroParcelas <= 1);
+  if (numeroParcelas <= 1) {
+    resumo.classList.add('escondido');
+    return;
+  }
+
+  const preco = el('pedido-preco').value === '' ? null : Number(el('pedido-preco').value);
+  if (preco === null || Number.isNaN(preco) || preco <= 0) {
+    resumo.textContent = 'Informe o preço para calcular as parcelas.';
+    resumo.classList.remove('escondido');
+    return;
+  }
+
+  const minimoEntrada = preco * PERCENTUAL_MINIMO_ENTRADA;
+  const valorEntrada = el('pedido-entrada').value === '' ? null : Number(el('pedido-entrada').value);
+  const parcelasRestantes = numeroParcelas - 1;
+
+  if (valorEntrada === null || Number.isNaN(valorEntrada) || valorEntrada < minimoEntrada) {
+    resumo.textContent = `Entrada mínima: ${formatarPreco(minimoEntrada)} (${Math.round(PERCENTUAL_MINIMO_ENTRADA * 100)}%).`;
+  } else {
+    const valorParcela = (preco - valorEntrada) / parcelasRestantes;
+    resumo.textContent = `Entrada ${formatarPreco(valorEntrada)} + ${parcelasRestantes}x ${formatarPreco(valorParcela)}.`;
+  }
+  resumo.classList.remove('escondido');
+}
+
+['pedido-parcelas', 'pedido-preco', 'pedido-entrada'].forEach((id) => {
+  el(id).addEventListener('input', atualizarResumoParcelas);
+});
+
 function abrirFormularioPedido(pedido = null) {
   el('form-pedido').reset();
   el('pedido-id').value = pedido?.idPedido || '';
   el('form-pedido-titulo').textContent = pedido ? 'Editar pedido' : 'Novo pedido';
   el('pedido-descricao').value = pedido?.descricao || '';
   el('pedido-preco').value = pedido?.preco ?? '';
+  el('pedido-parcelas').value = pedido?.numeroParcelas || 1;
+  el('pedido-entrada').value = pedido?.valorEntrada ?? '';
+  el('pedido-custo-materiais').value = pedido?.custoMateriais ?? '';
   el('pedido-data-entrega').value = pedido?.dataEntregaPrevista || '';
   mostrarView('form-pedido');
+  atualizarResumoParcelas();
   el('pedido-descricao').focus();
 }
 
@@ -445,9 +521,13 @@ el('btn-novo-pedido').addEventListener('click', () => abrirFormularioPedido());
 
 el('form-pedido').addEventListener('submit', (evento) => {
   evento.preventDefault();
+  const numeroParcelas = Number(el('pedido-parcelas').value);
   const dadosPedido = {
     descricao: el('pedido-descricao').value,
     preco: el('pedido-preco').value === '' ? null : Number(el('pedido-preco').value),
+    numeroParcelas,
+    valorEntrada: numeroParcelas > 1 && el('pedido-entrada').value !== '' ? Number(el('pedido-entrada').value) : '',
+    custoMateriais: el('pedido-custo-materiais').value === '' ? '' : Number(el('pedido-custo-materiais').value),
     dataEntregaPrevista: el('pedido-data-entrega').value
   };
 
@@ -514,6 +594,54 @@ function renderInativas() {
     container.appendChild(cartao);
   }
 }
+
+// ---------- Dashboard business intelligence ----------
+
+function preencherStatsFecho(fecho) {
+  el('dashboard-data-hoje').textContent = formatarData(fecho.data);
+  el('stat-dia-pedidos').textContent = fecho.totalPedidos;
+  el('stat-dia-receita').textContent = formatarPreco(fecho.totalReceita);
+  el('stat-dia-materiais').textContent = formatarPreco(fecho.totalMateriais);
+  el('stat-dia-lucro').textContent = formatarPreco(fecho.lucroBruto);
+}
+
+function preencherStatsMes(ganho) {
+  el('stat-mes-pedidos').textContent = ganho.totalPedidos;
+  el('stat-mes-receita').textContent = formatarPreco(ganho.totalReceita);
+  el('stat-mes-materiais').textContent = formatarPreco(ganho.totalMateriais);
+  el('stat-mes-despesas').textContent = formatarPreco(ganho.totalDespesasFixas);
+  el('stat-mes-lucro').textContent = formatarPreco(ganho.lucroLiquido);
+}
+
+function renderDashboard() {
+  preencherStatsFecho(obterFechoDiario());
+
+  const mesAtual = new Date().toISOString().slice(0, 7);
+  el('dashboard-mes-selecionado').value = mesAtual;
+  preencherStatsMes(obterGanhoMensal(mesAtual));
+
+  const despesas = obterDespesasFixas();
+  el('despesa-aluguer').value = despesas.aluguer || '';
+  el('despesa-eletricidade').value = despesas.eletricidade || '';
+  el('despesa-agua').value = despesas.agua || '';
+}
+
+el('dashboard-mes-selecionado').addEventListener('input', (evento) => {
+  if (!evento.target.value) return;
+  preencherStatsMes(obterGanhoMensal(evento.target.value));
+});
+
+el('form-despesas').addEventListener('submit', (evento) => {
+  evento.preventDefault();
+  const resultado = salvarDespesasFixas({
+    aluguer: el('despesa-aluguer').value === '' ? 0 : Number(el('despesa-aluguer').value),
+    eletricidade: el('despesa-eletricidade').value === '' ? 0 : Number(el('despesa-eletricidade').value),
+    agua: el('despesa-agua').value === '' ? 0 : Number(el('despesa-agua').value)
+  });
+  if (relatarResultado(resultado, 'Despesas salvas.')) {
+    preencherStatsMes(obterGanhoMensal(el('dashboard-mes-selecionado').value));
+  }
+});
 
 // ---------- Menu / backup ----------
 
@@ -614,8 +742,7 @@ aplicarTema(obterTemaEfetivo());
 // ---------- Inicialização ----------
 
 construirCamposMedidas();
-renderLista();
-mostrarView('lista');
+mostrarView('home');
 verificarPedidosProximos();
 
 if ('serviceWorker' in navigator) {

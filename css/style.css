@@ -1,27 +1,35 @@
 :root {
-  --cor-primaria: #7c5cbf;
-  --cor-primaria-escura: #5f43a0;
-  --cor-fundo: #faf8fd;
-  --cor-superficie: #ffffff;
-  --cor-borda: #e3ddef;
-  --cor-texto: #2a2530;
-  --cor-texto-secundario: #6f6579;
+  /* Amarelo suave original do logo — cor de destaque (botões, bordas ativas). */
+  --cor-primaria: #fde994;
+  --cor-primaria-escura: #fcdd65;
+  /* Texto sobre superfícies na cor primária (amarelo é claro demais para texto branco). */
+  --cor-primaria-texto: #111111;
+  /* Onyx — preto do logo, para texto principal e títulos. */
+  --cor-texto: #111111;
+  --cor-titulo: #333333;
+  /* Zinc — cinzas quentes para fundo, superfícies e texto secundário. */
+  --cor-fundo: #faf9f7;
+  --cor-superficie: #f2f0ea;
+  --cor-borda: #e6e4dd;
+  --cor-texto-secundario: #a19e95;
   --cor-perigo: #c0392b;
   --cor-perigo-fundo: #fbeae8;
   --cor-sucesso: #2e7d4f;
-  --sombra: 0 2px 10px rgba(60, 40, 90, 0.08);
+  --sombra: 0 2px 10px rgba(26, 25, 23, 0.08);
   --raio: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --cor-primaria: #a488e0;
-    --cor-primaria-escura: #c3aef0;
-    --cor-fundo: #17151b;
-    --cor-superficie: #221f28;
-    --cor-borda: #37323f;
-    --cor-texto: #ede9f2;
-    --cor-texto-secundario: #ada4b8;
+    --cor-primaria: #fde994;
+    --cor-primaria-escura: #fcdd65;
+    --cor-primaria-texto: #111111;
+    --cor-texto: #f2f0ea;
+    --cor-titulo: #f2f0ea;
+    --cor-fundo: #1a1917;
+    --cor-superficie: #2c2a25;
+    --cor-borda: #443f33;
+    --cor-texto-secundario: #a19e95;
     --cor-perigo: #e88a7d;
     --cor-perigo-fundo: #3a2320;
     --cor-sucesso: #7fd8a4;
@@ -32,27 +40,31 @@
 /* Preferência explícita do usuário (botão de tema), sempre vence o
    media query acima, seja qual for o tema do sistema operacional. */
 :root[data-theme="light"] {
-  --cor-primaria: #7c5cbf;
-  --cor-primaria-escura: #5f43a0;
-  --cor-fundo: #faf8fd;
-  --cor-superficie: #ffffff;
-  --cor-borda: #e3ddef;
-  --cor-texto: #2a2530;
-  --cor-texto-secundario: #6f6579;
+  --cor-primaria: #fde994;
+  --cor-primaria-escura: #fcdd65;
+  --cor-primaria-texto: #111111;
+  --cor-texto: #111111;
+  --cor-titulo: #333333;
+  --cor-fundo: #faf9f7;
+  --cor-superficie: #f2f0ea;
+  --cor-borda: #e6e4dd;
+  --cor-texto-secundario: #a19e95;
   --cor-perigo: #c0392b;
   --cor-perigo-fundo: #fbeae8;
   --cor-sucesso: #2e7d4f;
-  --sombra: 0 2px 10px rgba(60, 40, 90, 0.08);
+  --sombra: 0 2px 10px rgba(26, 25, 23, 0.08);
 }
 
 :root[data-theme="dark"] {
-  --cor-primaria: #a488e0;
-  --cor-primaria-escura: #c3aef0;
-  --cor-fundo: #17151b;
-  --cor-superficie: #221f28;
-  --cor-borda: #37323f;
-  --cor-texto: #ede9f2;
-  --cor-texto-secundario: #ada4b8;
+  --cor-primaria: #fde994;
+  --cor-primaria-escura: #fcdd65;
+  --cor-primaria-texto: #111111;
+  --cor-texto: #f2f0ea;
+  --cor-titulo: #f2f0ea;
+  --cor-fundo: #1a1917;
+  --cor-superficie: #2c2a25;
+  --cor-borda: #443f33;
+  --cor-texto-secundario: #a19e95;
   --cor-perigo: #e88a7d;
   --cor-perigo-fundo: #3a2320;
   --cor-sucesso: #7fd8a4;
@@ -120,6 +132,13 @@ body {
   flex-wrap: wrap;
 }
 
+.topbar-acoes-lista {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .campo-busca {
   padding: 8px 12px;
   border-radius: var(--raio);
@@ -145,7 +164,7 @@ body {
 
 .botao-primario {
   background: var(--cor-primaria);
-  color: #fff;
+  color: var(--cor-primaria-texto);
 }
 
 .botao-secundario {
@@ -172,7 +191,7 @@ body {
 .botao-voltar {
   background: none;
   border: none;
-  color: var(--cor-primaria);
+  color: var(--cor-titulo);
   cursor: pointer;
   font-size: 0.95rem;
   padding: 4px 0;
@@ -228,7 +247,7 @@ main {
 }
 
 .view h2 {
-  color: var(--cor-primaria-escura);
+  color: var(--cor-titulo);
 }
 
 /* Client grid / cards */
@@ -262,6 +281,120 @@ main {
   color: var(--cor-texto-secundario);
   text-align: center;
   padding: 40px 20px;
+}
+
+/* Grid de início (clientes / dashboard) */
+.grid-home {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  max-width: 700px;
+  margin: 24px auto 0;
+}
+
+.cartao-home {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 24px 20px;
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  text-align: left;
+  font-family: inherit;
+  color: var(--cor-texto);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.cartao-home:hover,
+.cartao-home:focus-visible {
+  border-color: var(--cor-primaria-escura);
+  transform: translateY(-2px);
+}
+
+.cartao-home-icone {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 6px;
+  color: var(--cor-titulo);
+}
+
+.cartao-home h3 {
+  margin: 0;
+  color: var(--cor-titulo);
+}
+
+.cartao-home p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--cor-texto-secundario);
+}
+
+/* Dashboard */
+.dashboard-secao {
+  margin: 20px 0 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.dashboard-secao h3 {
+  margin: 0 0 4px;
+  color: var(--cor-titulo);
+}
+
+.dashboard-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-secao-cabecalho input[type="month"] {
+  padding: 7px 10px;
+  border-radius: var(--raio);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: inherit;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.stat-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 12px 14px;
+}
+
+.stat-rotulo {
+  font-size: 0.78rem;
+  color: var(--cor-texto-secundario);
+}
+
+.stat-valor {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.stat-cartao-destaque {
+  border-color: var(--cor-primaria-escura);
+}
+
+.stat-cartao-destaque .stat-valor {
+  color: var(--cor-titulo);
 }
 
 .texto-secundario {
@@ -308,7 +441,7 @@ main {
 
 .fieldset legend {
   padding: 0 6px;
-  color: var(--cor-primaria-escura);
+  color: var(--cor-titulo);
   font-weight: 600;
 }
 
@@ -358,8 +491,8 @@ main {
 }
 
 .aba-ativa {
-  color: var(--cor-primaria);
-  border-bottom-color: var(--cor-primaria);
+  color: var(--cor-titulo);
+  border-bottom-color: var(--cor-primaria-escura);
   font-weight: 600;
 }
 
@@ -445,7 +578,7 @@ main {
 .kanban-coluna-titulo {
   margin: 0 0 10px;
   font-size: 0.85rem;
-  color: var(--cor-primaria-escura);
+  color: var(--cor-titulo);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -480,6 +613,8 @@ main {
 }
 
 .kanban-cartao-preco,
+.kanban-cartao-parcelas,
+.kanban-cartao-materiais,
 .kanban-cartao-entrega {
   margin: 2px 0;
   font-size: 0.8rem;

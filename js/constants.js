@@ -5,6 +5,9 @@
  */
 export const STORAGE_KEY = 'clientes_estilista';
 
+/** Chave usada para persistir as despesas fixas mensais (renda, água, eletricidade). */
+export const STORAGE_KEY_DESPESAS = 'despesas_fixas_estilista';
+
 /** Versão do formato de backup exportado (permite migrações futuras). */
 export const VERSAO_BACKUP = 2;
 
@@ -21,6 +24,7 @@ export const CAMPOS_OBRIGATORIOS_CLIENTE = ['id', 'nome'];
  */
 export const STATUS_PEDIDO = [
   { chave: 'pagamento_entrada', rotulo: 'Pagamento entrada' },
+  { chave: 'materiais', rotulo: 'Materiais' },
   { chave: 'corte', rotulo: 'Corte' },
   { chave: 'costura', rotulo: 'Costura' },
   { chave: 'acabamento', rotulo: 'Acabamento' },
@@ -30,3 +34,9 @@ export const STATUS_PEDIDO = [
 
 /** Quantos dias antes da entrega prevista o ateliê deve ser avisado. */
 export const DIAS_AVISO_ENTREGA = 3;
+
+/** Número máximo de parcelas aceito para o pagamento de um pedido. */
+export const MAX_PARCELAS = 3;
+
+/** Percentual mínimo do preço exigido como entrada quando o pedido é parcelado. */
+export const PERCENTUAL_MINIMO_ENTRADA = 0.5;

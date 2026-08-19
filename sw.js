@@ -1,4 +1,4 @@
-const CACHE_NAME = 'modilyne-v6';
+const CACHE_NAME = 'modilyne-v8';
 
 const ARQUIVOS_ESSENCIAIS = [
   './',
@@ -13,7 +13,10 @@ const ARQUIVOS_ESSENCIAIS = [
   './js/validators.js',
   './js/clientesRepository.js',
   './js/backupService.js',
-  './assets/Modilyne_logo.svg'
+  './js/financeiroService.js',
+  './assets/Modilyne_logo.svg',
+  './assets/people-svgrepo-com.svg',
+  './assets/business-building-construction-office-finance-svgrepo-com.svg'
 ];
 
 self.addEventListener('install', (evento) => {

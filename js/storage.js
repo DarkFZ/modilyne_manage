@@ -5,7 +5,7 @@
  * o tratamento de corrupção de dados e de estouro de cota fique centralizado.
  */
 
-import { STORAGE_KEY } from './constants.js';
+import { STORAGE_KEY, STORAGE_KEY_DESPESAS } from './constants.js';
 import { normalizarCliente } from './validators.js';
 
 /**
@@ -71,6 +71,47 @@ export function gravarStorage(clientes) {
     } else {
       console.error('[Storage] Falha inesperada ao gravar no LocalStorage.', erro);
     }
+    return false;
+  }
+}
+
+/**
+ * Lê o objeto de despesas fixas mensais (renda, água, eletricidade) do
+ * LocalStorage. Nunca lança exceção: qualquer problema resulta em objeto
+ * vazio, que normalizarDespesas (validators.js) preenche com zeros.
+ * @returns {Object}
+ */
+export function lerDespesas() {
+  let bruto;
+  try {
+    bruto = localStorage.getItem(STORAGE_KEY_DESPESAS);
+  } catch (erro) {
+    console.error('[Storage] LocalStorage indisponível neste ambiente.', erro);
+    return {};
+  }
+
+  if (!bruto) return {};
+
+  try {
+    const dados = JSON.parse(bruto);
+    return dados && typeof dados === 'object' && !Array.isArray(dados) ? dados : {};
+  } catch (erro) {
+    console.error('[Storage] JSON corrompido em "despesas_fixas_estilista". Retornando objeto vazio.', erro);
+    return {};
+  }
+}
+
+/**
+ * Serializa e grava o objeto de despesas fixas mensais no LocalStorage.
+ * @param {{aluguer: number, eletricidade: number, agua: number}} despesas
+ * @returns {boolean} true se a gravação foi concluída com sucesso.
+ */
+export function gravarDespesas(despesas) {
+  try {
+    localStorage.setItem(STORAGE_KEY_DESPESAS, JSON.stringify(despesas));
+    return true;
+  } catch (erro) {
+    console.error('[Storage] Falha inesperada ao gravar despesas no LocalStorage.', erro);
     return false;
   }
 }

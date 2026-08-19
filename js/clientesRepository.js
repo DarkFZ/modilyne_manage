@@ -160,7 +160,7 @@ export function atualizarMedidas(clienteId, dadosMedidas = {}) {
  * Registra um novo pedido (peça encomendada) para um cliente, entrando no
  * kanban de processo já na primeira etapa (pagamento_entrada).
  * @param {string} clienteId
- * @param {Partial<{descricao: string, preco: number|null, dataEntregaPrevista: string}>} dadosPedido
+ * @param {Partial<{descricao: string, preco: number|null, numeroParcelas: number, valorEntrada: number|null, custoMateriais: number|null, dataEntregaPrevista: string}>} dadosPedido
  * @returns {{sucesso: boolean, pedido?: import('./validators.js').Pedido, erro?: string}}
  */
 export function adicionarPedido(clienteId, dadosPedido = {}) {
@@ -175,11 +175,20 @@ export function adicionarPedido(clienteId, dadosPedido = {}) {
     return { sucesso: false, erro: 'Cliente não encontrado.' };
   }
 
+  const numeroParcelas = dadosPedido.numeroParcelas === undefined || dadosPedido.numeroParcelas === ''
+    ? 1
+    : Number(dadosPedido.numeroParcelas);
+
   /** @type {import('./validators.js').Pedido} */
   const novoPedido = {
     idPedido: gerarId('ped'),
     descricao: dadosPedido.descricao.trim(),
     preco: dadosPedido.preco === '' || dadosPedido.preco === undefined ? null : Number(dadosPedido.preco),
+    numeroParcelas,
+    valorEntrada: numeroParcelas > 1 ? Number(dadosPedido.valorEntrada) : null,
+    custoMateriais: dadosPedido.custoMateriais === '' || dadosPedido.custoMateriais === undefined || dadosPedido.custoMateriais === null
+      ? null
+      : Number(dadosPedido.custoMateriais),
     dataCriacao: dataAtualISO(),
     dataEntregaPrevista: dadosPedido.dataEntregaPrevista || '',
     status: 'pagamento_entrada',
@@ -198,7 +207,7 @@ export function adicionarPedido(clienteId, dadosPedido = {}) {
  * existente, sem alterar seu status no kanban.
  * @param {string} clienteId
  * @param {string} idPedido
- * @param {Partial<{descricao: string, preco: number|null, dataEntregaPrevista: string}>} dadosPedido
+ * @param {Partial<{descricao: string, preco: number|null, numeroParcelas: number, valorEntrada: number|null, custoMateriais: number|null, dataEntregaPrevista: string}>} dadosPedido
  * @returns {{sucesso: boolean, pedido?: import('./validators.js').Pedido, erro?: string}}
  */
 export function editarPedido(clienteId, idPedido, dadosPedido = {}) {
@@ -219,12 +228,21 @@ export function editarPedido(clienteId, idPedido, dadosPedido = {}) {
     return { sucesso: false, erro: 'Pedido não encontrado.' };
   }
 
+  const numeroParcelas = dadosPedido.numeroParcelas === undefined || dadosPedido.numeroParcelas === ''
+    ? 1
+    : Number(dadosPedido.numeroParcelas);
+
   const pedidoAtual = pedidos[indicePedido];
   /** @type {import('./validators.js').Pedido} */
   const pedidoAtualizado = {
     ...pedidoAtual,
     descricao: dadosPedido.descricao.trim(),
     preco: dadosPedido.preco === '' || dadosPedido.preco === undefined ? null : Number(dadosPedido.preco),
+    numeroParcelas,
+    valorEntrada: numeroParcelas > 1 ? Number(dadosPedido.valorEntrada) : null,
+    custoMateriais: dadosPedido.custoMateriais === '' || dadosPedido.custoMateriais === undefined || dadosPedido.custoMateriais === null
+      ? null
+      : Number(dadosPedido.custoMateriais),
     dataEntregaPrevista: dadosPedido.dataEntregaPrevista || pedidoAtual.dataEntregaPrevista
   };
 

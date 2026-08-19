@@ -9,3 +9,4 @@ export * from './utils.js';
 export * from './validators.js';
 export * from './clientesRepository.js';
 export * from './backupService.js';
+export * from './financeiroService.js';
